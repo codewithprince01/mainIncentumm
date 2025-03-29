@@ -367,7 +367,10 @@ const fetchFormById = asyncHandler(async (req, res) => {
       return res.status(404).json({ success: false, message: "Form not found" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}/`;
+    // Use HTTPS and correct uploads path
+    const baseUrl = process.env.NODE_ENV === "production" 
+      ? "https://incentum.ai/" 
+      : "http://localhost:8080/";
     const updatedLoanDocuments = form.loanDocuments.map((doc) => {
       const updatedDoc = {};
       for (const [key, value] of Object.entries(doc)) {

@@ -99,14 +99,16 @@ const UserApplications = () => {
   const fetchDocumentUrl = async (docPath, applicantIndex, docKey) => {
     const adminToken = document.cookie.split("adminToken=")[1]?.split(";")[0] || "";
   
-    // Determine API base URL dynamically
-    const isLocal = window.location.hostname === "localhost";
-    const apiBaseUrl = isLocal ? "http://localhost:5000" : "https://incentum.ai";
-  
-    // Ensure document path uses the correct protocol
-    const url = docPath.startsWith("http://") || docPath.startsWith("https://")
-      ? docPath
-      : `${apiBaseUrl}${docPath.startsWith("/") ? docPath : `/${docPath}`}`;
+    // Use environment-specific base URL
+    const apiBaseUrl = process.env.NODE_ENV === "production" 
+      ? "https://incentum.ai" 
+      : "http://localhost:8080";
+    let url = docPath;
+    if (!docPath.startsWith("http://") && !docPath.startsWith("https://")) {
+      url = `${apiBaseUrl}/uploads/${docPath.split("/").pop()}`;
+    } else if (docPath.startsWith("http://") && process.env.NODE_ENV === "production") {
+      url = docPath.replace("http://", "https://");
+    }
   
     try {
       const response = await fetch(url, {
