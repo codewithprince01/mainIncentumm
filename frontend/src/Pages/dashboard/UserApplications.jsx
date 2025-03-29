@@ -98,10 +98,16 @@ const UserApplications = () => {
 
   const fetchDocumentUrl = async (docPath, applicantIndex, docKey) => {
     const adminToken = document.cookie.split("adminToken=")[1]?.split(";")[0] || "";
-    // Check if docPath is already a full URL; if so, use it directly, otherwise prepend API URL
-    const url = docPath.startsWith("http://") || docPath.startsWith("https://") 
-      ? docPath 
-      : `${import.meta.env.VITE_API_URL}${docPath}`;
+  
+    // Determine API base URL dynamically
+    const isLocal = window.location.hostname === "localhost";
+    const apiBaseUrl = isLocal ? "http://localhost:5000" : "https://incentum.ai";
+  
+    // Ensure document path uses the correct protocol
+    const url = docPath.startsWith("http://") || docPath.startsWith("https://")
+      ? docPath
+      : `${apiBaseUrl}${docPath.startsWith("/") ? docPath : `/${docPath}`}`;
+  
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -112,20 +118,24 @@ const UserApplications = () => {
         },
         credentials: "include",
       });
+  
       if (!response.ok) throw new Error(`Failed to fetch document: ${response.status}`);
+  
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
+  
       setDocumentUrls((prev) => ({
         ...prev,
         [`${applicantIndex}_${docKey}`]: objectUrl,
       }));
+  
       return objectUrl;
     } catch (err) {
       console.error(`Error fetching ${docKey} for Applicant ${applicantIndex + 1}:`, err);
       return null;
     }
   };
-
+  
   const handleViewDocuments = async (applicantIndex) => {
     setViewDocsForApplicant(applicantIndex);
     const documents = currentForm.loanDocuments?.[applicantIndex] || {};
