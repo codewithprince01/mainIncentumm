@@ -1,0 +1,612 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(135deg, #0a0a0f 0%, #0f1419 25%, #1e293b 50%, #334155 75%, #475569 100%);
+  color: #f8fafc;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Enhanced Banking Theme Utilities */
+.banking-text-gradient {
+  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 25%, #0284c7 50%, #1d4ed8 75%, #4f46e5 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease-in-out infinite;
+}
+
+.banking-card {
+  background: rgba(15, 20, 25, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.1);
+}
+
+.banking-card:hover {
+  border-color: rgba(14, 165, 233, 0.6);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.2);
+}
+
+.banking-button-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  color: white;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+}
+
+.banking-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #3b82f6 0%, #0284c7 100%);
+}
+
+.banking-button-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(148, 163, 184, 0.6);
+  color: #f8fafc;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.banking-button-secondary:hover {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  transform: translateY(-2px);
+}
+
+/* Enhanced Glass Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Premium Glass Effect for Home Loan Page */
+.premium-glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.premium-glass:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Modern Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6, #0284c7);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+/* Premium Gradient Text for Home Loan */
+.premium-gradient-text {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 25%, #d97706 50%, #dc2626 75%, #b91c1c 100%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradientShift 8s ease-in-out infinite;
+}
+
+/* Enhanced Animations */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes glow {
+  0% { box-shadow: 0 0 5px rgba(14, 165, 233, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 30px rgba(14, 165, 233, 0.3); }
+  100% { box-shadow: 0 0 5px rgba(2, 132, 199, 0.3); }
+}
+
+/* Premium Glow Effect */
+@keyframes premiumGlow {
+  0% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.5), 0 0 40px rgba(251, 191, 36, 0.3); }
+  100% { box-shadow: 0 0 10px rgba(217, 119, 6, 0.3); }
+}
+
+/* Perspective Effect for 3D Transforms */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* Enhanced Floating Animation */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-15px) rotate(2deg); }
+  66% { transform: translateY(10px) rotate(-1deg); }
+}
+
+@keyframes floatMedium {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-25px) rotate(3deg); }
+}
+
+@keyframes floatFast {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-10px) rotate(1deg); }
+  75% { transform: translateY(5px) rotate(-0.5deg); }
+}
+
+/* Smooth Reveal Animation */
+@keyframes smoothReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Premium Button Hover Effect */
+.premium-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  transition: all 0.3s ease;
+}
+
+.premium-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.premium-button:hover::before {
+  left: 100%;
+}
+
+.premium-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4);
+}
+
+/* Line clamp utility */
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Enhanced Scrollbar for Premium Feel */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+  border-radius: 5px;
+  border: 2px solid #0f172a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #0284c7, #1d4ed8);
+}
+
+/* Premium Selection Styling */
+::selection {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3));
+  color: #f8fafc;
+}
+
+/* Ensure all sections have proper dark background */
+section, div[class*="bg-"] {
+  background-color: inherit;
+}
+
+/* Enhanced Accordion Styling */
+.accordion-premium {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.accordion-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced Feature Card Styling */
+.feature-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.feature-card:hover::before {
+  opacity: 1;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Existing styles preserved */
+.bg-image {
+  background-image: url('/Signup.webp'); 
+  background-size: cover;          
+  background-position: center;   
+  background-repeat: no-repeat;  
+  height: 100vh;              
+  position: relative;  
+}
+
+.landingheader{
+  background-image: url('/loanheader.webp'); 
+  background-size: cover;          
+  background-position: center;   
+  background-repeat: no-repeat;
+  height: 100%;
+  position: relative; 
+  display: inline-block; 
+  width: 100%; 
+  position: relative;
+  overflow: hidden;
+}
+
+.landingfooter{
+  background-image: url('/loanfooter.webp'); 
+  background-size: cover;          
+  background-position: center;   
+  background-repeat: no-repeat;
+  height: 100%;
+  position: relative; 
+  display: inline-block; 
+  width: 100%; 
+  position: relative;
+  overflow: hidden;
+}
+
+.signup{
+  box-shadow: 2px 6px 6px 6px rgba(14, 165, 233, 0.3);
+}
+
+.bg{
+  background: linear-gradient(135deg, #0a0a0f 0%, #1e3a8a 50%, #1d4ed8 100%);
+}
+
+.imgBorder {
+  box-shadow: 
+    -1px -1px 0px #0ea5e9, 
+     1px 1px 0px rgba(59, 130, 246, 0.7);  
+}
+
+/* Removed old navborder - now using new professional design */
+
+@media (max-width: 640px){
+  .signup{
+    box-shadow: 2px 6px 6px 6px rgba(14, 165, 233, 0.4);
+  }
+  
+  /* Mobile optimizations for premium design */
+  .premium-glass {
+    backdrop-filter: blur(16px);
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+}
+
+.button{
+    background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #0284c7 100%);
+}
+
+.responsive{
+    background: linear-gradient(135deg, #0a0a0f 0%, #1e3a8a 30%, #1d4ed8 60%, #3b82f6 100%);
+}
+
+.heading {
+  background: linear-gradient(135deg, #FFFFFF 0%, #0ea5e9 50%, #3b82f6 100%); 
+  background-clip: text;
+  -webkit-background-clip: text; 
+  color: transparent; 
+}
+
+/* Enhanced heading for premium feel */
+.premium-heading {
+  background: linear-gradient(135deg, #FFFFFF 0%, #fbbf24 25%, #f59e0b 50%, #0ea5e9 75%, #3b82f6 100%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradientShift 10s ease-in-out infinite;
+}
+
+/* form styles */
+.form-bg-image {
+  background-image: url('/form/bgImage.webp'); 
+  background-size: cover;          
+  background-position: center;   
+  background-repeat: no-repeat;  
+  min-height: 100vh;
+  height: auto;
+  position: relative;
+  background-color: #C0F7FB;
+}
+
+.form-slidebar{
+  background-image: url('/form/sideBar.webp'); 
+  background-size: cover;          
+  background-position: center;   
+  background-repeat: no-repeat; 
+  max-height: 100%; 
+  height: 800px;   
+  width: 400px;          
+  position: relative;  
+}
+
+/* Enhanced animations */
+@keyframes slide-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.group:hover .hover-underline {
+  animation: expandUnderlineHover 0.5s ease-out forwards;
+}
+
+.hover-underline {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  width: 0;
+  height: 4px;
+  background: linear-gradient(to right, #0ea5e9, #3b82f6);
+  border-radius: 9999px;
+}
+
+@keyframes expandUnderlineHover {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+/* Premium underline effect */
+.premium-underline {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  width: 0;
+  height: 4px;
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+
+.group:hover .premium-underline {
+  width: 100%;
+}
+
+/* Custom Slider Styling for EMI Calculator */
+.slider-blue::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+  transition: all 0.3s ease;
+}
+
+.slider-blue::-webkit-slider-thumb:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.6);
+}
+
+.slider-blue::-webkit-slider-track {
+  background: linear-gradient(to right, #2563eb, #e2e8f0);
+  height: 12px;
+  border-radius: 6px;
+}
+
+.slider-blue::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+  transition: all 0.3s ease;
+}
+
+.slider-blue::-moz-range-thumb:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.6);
+}
+
+.slider-blue::-moz-range-track {
+  background: linear-gradient(to right, #2563eb, #e2e8f0);
+  height: 12px;
+  border-radius: 6px;
+  border: none;
+}
+
+/* Enhanced background patterns matching loan page */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.53) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.6) 1px, transparent 1px);
+  background-size: 130px 130px;
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 25px 25px;
+}
+
+/* Loan Amount Slider Styles */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Webkit browsers (Chrome, Safari, newer versions of Edge) */
+input[type="range"]::-webkit-slider-track {
+  background: rgba(255, 255, 255, 0.2);
+  height: 8px;
+  border-radius: 4px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  background: rgba(255, 255, 255, 0.2);
+  height: 8px;
+  border-radius: 4px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+}
+
+
