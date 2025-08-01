@@ -35,7 +35,7 @@ const formSchema = new mongoose.Schema({
                 years_in_business: Number,
                 years_of_itr_filing: Number,
             },
-            loanAmountRequired: Number,
+            loanAmountRequired: { type: Number, required: false },
             propertyFinalized: String,  
             propertyAddress: String,
             agreementExecuted: String,    
@@ -72,7 +72,7 @@ const formSchema = new mongoose.Schema({
             dealerName: String,          
             dealerCity: String,          
             vehiclePrice: Number,     
-            loanAmountRequired: Number,
+            loanAmountRequired: { type: Number, required: false },
             preferredBank: String,    
         }, { _id: false }),
         
@@ -91,7 +91,7 @@ const formSchema = new mongoose.Schema({
             propertyAddress: String,
             agreementExecuted: String, 
             agreementValue: Number,  //Consistent with form (agreement_mou_value)
-            loanAmountRequired: Number,
+            loanAmountRequired: { type: Number, required: false },
             preferredBank: String,    // Consistent naming
         }, { _id: false }),
        // removed validator
@@ -120,7 +120,7 @@ const formSchema = new mongoose.Schema({
                 years_in_business: Number,
                 years_of_itr_filing: Number,
             },
-            loanAmountRequired: Number,
+            loanAmountRequired: { type: Number, required: false },
             preferredBank: String, //Consistent with form
 
         }, { _id: false }),
@@ -153,7 +153,7 @@ const formSchema = new mongoose.Schema({
             propertyAddress: String,
             agreementExecuted: String, // Keep as string
             agreementValue: Number,  //Consistent with form (agreement_mou_value)
-            loanAmountRequired: Number,
+            loanAmountRequired: { type: Number, required: false },
             preferredBank: String,    // Consistent naming
 
         }, { _id: false }),

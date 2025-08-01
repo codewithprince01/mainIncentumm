@@ -103,35 +103,12 @@ const HomeLoanForm = () => {
     }
   };
 
-  // Create application on component mount
-  React.useEffect(() => {
-    const createApplication = async () => {
-      try {
-        const response = await axios.post('http://localhost:5000/api/multistep/create', {
-          userId: user._id,
-          loanType: 'home'
-        });
-        
-        if (response.data.success) {
-          setApplicationId(response.data.data.applicationId);
-        }
-      } catch (error) {
-        console.error('Error creating application:', error);
-        toast.error('Failed to initialize application');
-      }
-    };
-
-    if (user?._id && !applicationId) {
-      createApplication();
-    }
-  }, [user, applicationId]);
-
   // Save step data
   const saveStepData = async (step, stepData) => {
     if (!applicationId) return;
 
     try {
-      await axios.post('http://localhost:5000/api/multistep/save-step', {
+      await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/save-step`, {
         applicationId,
         step,
         stepData
@@ -144,6 +121,11 @@ const HomeLoanForm = () => {
 
   // Navigation functions
   const nextStep = async () => {
+    if (!applicationId && currentStep > 2) {
+      toast.error('Application not initialized. Please complete previous steps.');
+      return;
+    }
+
     let stepData = {};
     
     switch (currentStep) {
@@ -210,6 +192,91 @@ const HomeLoanForm = () => {
     setCurrentStep(prev => prev - 1);
   };
 
+  const handleNextFromStep1 = async () => {
+    // Only require phoneNumber and fullName for step 1
+    const requiredFields = ['fullName', 'phoneNumber'];
+    for (const field of requiredFields) {
+      let value = formData[field];
+      if (!value) {
+        toast.error(`Please fill all required fields before proceeding.`);
+        return;
+      }
+    }
+    setCurrentStep(currentStep + 1);
+  };
+
+  const handleNextFromStep2 = async () => {
+    if (!formData.loanAmountRequired) {
+      toast.error('Please enter the loan amount before proceeding.');
+      return;
+    }
+
+    // Only require name and phone number
+    const requiredFields = ['fullName', 'phoneNumber'];
+    for (const field of requiredFields) {
+      if (!formData[field]) {
+        toast.error(`Please fill all required fields in previous steps.`);
+        return;
+      }
+    }
+
+    try {
+      // First create the application if not already created
+      if (!applicationId) {
+        const createResponse = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
+          userId: user.id,
+          loanType: 'home'
+        });
+
+        if (createResponse.data.success) {
+          setApplicationId(createResponse.data.data.applicationId);
+        } else {
+          toast.error('Failed to create application: ' + (createResponse.data.message || 'Unknown error'));
+          return;
+        }
+      }
+
+      // Save step 1 data (personal details)
+      await saveStepData(1, {
+        fullName: formData.fullName,
+        fatherName: formData.fatherName,
+        phoneNumber: formData.phoneNumber,
+        email: formData.email,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        qualification: formData.qualification,
+        employmentType: formData.employmentType,
+        maritalStatus: formData.maritalStatus,
+        numberOfDependents: formData.numberOfDependents,
+        panNumber: formData.panNumber,
+        residenceType: formData.residenceType,
+        citizenship: formData.citizenship,
+        permanentAddress: formData.permanentAddress,
+        presentAddress: formData.presentAddress
+      });
+
+      // Save step 2 data (loan details)
+      await saveStepData(2, {
+        loanAmountRequired: formData.loanAmountRequired
+      });
+
+      setCurrentStep(currentStep + 1);
+      toast.success('Application data saved successfully!');
+    } catch (error) {
+      console.error('Error saving application data:', error);
+      toast.error('Failed to save application data: ' + (error.response?.data?.message || 'Server error'));
+    }
+  };
+
+  // For co-applicant, only require phoneNumber and fullName
+  const validateCoApplicant = (coApplicant) => {
+    if (!coApplicant.fullName || !coApplicant.phoneNumber) {
+      toast.error('Please fill name and phone number for co-applicant.');
+      return false;
+    }
+    return true;
+  };
+
   // Co-applicant handlers
   const handleAddCoApplicant = () => {
     setEditingCoApplicantIndex(null);
@@ -245,12 +312,27 @@ const HomeLoanForm = () => {
   const handleFinishApplication = async () => {
     setIsSubmitting(true);
     try {
+      // Always save step 1 data before submitting
+      await saveStepData(1, {
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        // ...other fields if needed
+      });
+
       // Save co-applicants data
       await saveStepData(5, { coApplicants });
+
+      // Check if applicationId exists
+      if (!applicationId) {
+        toast.error('Application ID not found. Please refresh the page and try again.');
+        return;
+      }
+
+      console.log('Submitting application with ID:', applicationId);
       
       // Submit application
-      const response = await axios.post('http://localhost:5000/api/multistep/submit', {
-        applicationId
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/submit`, {
+        applicationId: applicationId
       });
 
       if (response.data.success) {
@@ -259,7 +341,11 @@ const HomeLoanForm = () => {
       }
     } catch (error) {
       console.error('Error submitting application:', error);
-      toast.error('Failed to submit application');
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Failed to submit application');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -267,7 +353,10 @@ const HomeLoanForm = () => {
 
   // Document upload handler
   const handleDocumentUpload = async (documentType, file) => {
-    if (!file || !applicationId) return;
+    if (!file || !applicationId) {
+      toast.error('Application not initialized. Please complete previous steps.');
+      return;
+    }
 
     setUploadingFiles(prev => ({ ...prev, [documentType]: true }));
 
@@ -278,7 +367,7 @@ const HomeLoanForm = () => {
       formData.append('documentType', documentType);
       formData.append('applicantType', 'main');
 
-      const response = await axios.post('http://localhost:5000/api/multistep/upload-document', formData, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/upload-document`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -325,10 +414,9 @@ const HomeLoanForm = () => {
               required
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Father Name *
+              Father Name
             </label>
             <input
               type="text"
@@ -336,7 +424,6 @@ const HomeLoanForm = () => {
               value={formData.fatherName}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
@@ -357,7 +444,7 @@ const HomeLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Email ID *
+              Email ID
             </label>
             <input
               type="email"
@@ -365,13 +452,12 @@ const HomeLoanForm = () => {
               value={formData.email}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Date of Birth *
+              Date of Birth
             </label>
             <input
               type="date"
@@ -379,20 +465,18 @@ const HomeLoanForm = () => {
               value={formData.dateOfBirth}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Gender *
+              Gender
             </label>
             <select
               name="gender"
               value={formData.gender}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
@@ -403,14 +487,13 @@ const HomeLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Qualification *
+              Qualification
             </label>
             <select
               name="qualification"
               value={formData.qualification}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Qualification</option>
               <option value="Graduate">Graduate</option>
@@ -419,19 +502,15 @@ const HomeLoanForm = () => {
               <option value="Others">Others</option>
             </select>
           </div>
-
-
-
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Marital Status *
+              Marital Status
             </label>
             <select
               name="maritalStatus"
               value={formData.maritalStatus}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Marital Status</option>
               <option value="Single">Single</option>
@@ -465,14 +544,13 @@ const HomeLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Number of Dependents *
+              Number of Dependents
             </label>
             <select
               name="numberOfDependents"
               value={formData.numberOfDependents}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="0">0</option>
               <option value="1">1</option>
@@ -485,7 +563,7 @@ const HomeLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              PAN Number *
+              PAN Number
             </label>
             <input
               type="text"
@@ -495,20 +573,18 @@ const HomeLoanForm = () => {
               pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
               placeholder="ABCDE1234F"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Residence Type *
+              Residence Type
             </label>
             <select
               name="residenceType"
               value={formData.residenceType}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Residence Type</option>
               <option value="Owned">Owned</option>
@@ -520,14 +596,13 @@ const HomeLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Citizenship *
+              Citizenship
             </label>
             <select
               name="citizenship"
               value={formData.citizenship}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="Indian">Indian</option>
               <option value="NRI">NRI</option>
@@ -544,40 +619,37 @@ const HomeLoanForm = () => {
           <h3 className="text-lg font-semibold text-white mb-4">Permanent Address</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">State *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">State</label>
               <input
                 type="text"
                 name="permanentAddress.state"
                 value={formData.permanentAddress.state}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">District *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">District</label>
               <input
                 type="text"
                 name="permanentAddress.district"
                 value={formData.permanentAddress.district}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address</label>
               <textarea
                 name="permanentAddress.address"
                 value={formData.permanentAddress.address}
                 onChange={handleInputChange}
                 rows="3"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code</label>
               <input
                 type="text"
                 name="permanentAddress.pinCode"
@@ -585,12 +657,10 @@ const HomeLoanForm = () => {
                 onChange={handleInputChange}
                 pattern="[0-9]{6}"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
           </div>
         </div>
-
         {/* Present Address */}
         <div className="bg-white/5 rounded-xl p-6 border border-white/10">
           <div className="flex items-center justify-between mb-4">
@@ -610,40 +680,37 @@ const HomeLoanForm = () => {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">State *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">State</label>
               <input
                 type="text"
                 name="presentAddress.state"
                 value={formData.presentAddress.state}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">District *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">District</label>
               <input
                 type="text"
                 name="presentAddress.district"
                 value={formData.presentAddress.district}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address</label>
               <textarea
                 name="presentAddress.address"
                 value={formData.presentAddress.address}
                 onChange={handleInputChange}
                 rows="3"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code</label>
               <input
                 type="text"
                 name="presentAddress.pinCode"
@@ -651,7 +718,6 @@ const HomeLoanForm = () => {
                 onChange={handleInputChange}
                 pattern="[0-9]{6}"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
           </div>
@@ -766,7 +832,6 @@ const HomeLoanForm = () => {
               />
             </div>
           )}
-
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
               Loan Amount Required *
@@ -786,7 +851,7 @@ const HomeLoanForm = () => {
                 </p>
               </div>
               
-                            {/* Slider */}
+              {/* Slider */}
               <div className="relative px-2">
                 <input
                   type="range"
@@ -800,7 +865,6 @@ const HomeLoanForm = () => {
                   style={{
                     background: `linear-gradient(to right, #3B82F6 0%, #1D4ED8 ${((formData.loanAmountRequired || 100000) - 100000) / (50000000 - 100000) * 100}%, rgba(255,255,255,0.2) ${((formData.loanAmountRequired || 100000) - 100000) / (50000000 - 100000) * 100}%)`
                   }}
-                  required
                 />
                 
                 {/* Range markers */}
@@ -905,7 +969,6 @@ const HomeLoanForm = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-100 mb-2">
                   Organisation Type *
@@ -977,7 +1040,6 @@ const HomeLoanForm = () => {
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-100 mb-2">
                   Monthly Salary (in hand)
@@ -1141,7 +1203,6 @@ const HomeLoanForm = () => {
           <h2 className="text-2xl font-bold text-white mb-2">Document Upload - HOME LOAN APPLICATION</h2>
           <p className="text-gray-300">Please upload the required documents</p>
         </div>
-
         <div className="bg-white/5 rounded-xl p-6 border border-white/10">
           <div className="space-y-6">
             {documentsToShow.map((doc, index) => (
@@ -1260,7 +1321,6 @@ const HomeLoanForm = () => {
       <div className="absolute bottom-20 right-20 w-52 h-52 bg-blue-500/8 rounded-full blur-2xl animate-pulse delay-1000"></div>
       <div className="absolute top-1/2 left-10 w-32 h-32 bg-blue-500/12 rounded-full blur-xl animate-pulse delay-500"></div>
       <div className="absolute top-10 right-1/3 w-24 h-24 bg-blue-500/15 rounded-full blur-xl animate-pulse delay-700"></div>
-
       <div className="relative z-10 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
@@ -1295,7 +1355,7 @@ const HomeLoanForm = () => {
                             <FaCheck className="w-6 h-6 text-white" />
                           ) : (
                             <step.icon className={`w-6 h-6 ${
-                              currentStep === step.number ? 'text-white' : 'text-gray-400'
+                              currentStep === step.number ? 'text-white' : 'text-gray-400'}
                             }`} />
                           )}
                           
@@ -1306,12 +1366,12 @@ const HomeLoanForm = () => {
                         
                         <div className="mt-3 text-center">
                           <div className={`text-sm font-medium ${
-                            currentStep === step.number ? 'text-blue-400' : 'text-gray-400'
+                            currentStep === step.number ? 'text-blue-400' : 'text-gray-400'}
                           }`}>
                             Step {step.number}
                           </div>
                           <div className={`text-xs ${
-                            currentStep === step.number ? 'text-white' : 'text-gray-500'
+                            currentStep === step.number ? 'text-white' : 'text-gray-500'}
                           }`}>
                             {step.title}
                           </div>
@@ -1337,7 +1397,6 @@ const HomeLoanForm = () => {
             ) : (
               <form onSubmit={(e) => e.preventDefault()}>
                 {renderStepContent()}
-
                 {/* Navigation Buttons */}
                 <div className="flex justify-between items-center mt-12 pt-8 border-t border-white/20">
                   <button
@@ -1361,7 +1420,15 @@ const HomeLoanForm = () => {
                   {currentStep < 5 ? (
                     <button
                       type="button"
-                      onClick={nextStep}
+                      onClick={async () => {
+                        if (currentStep === 1) {
+                          await handleNextFromStep1();  // Validates and advances to step 2
+                        } else if (currentStep === 2) {
+                          await handleNextFromStep2();  // Creates application, sets ID, advances to step 3
+                        } else {
+                          await nextStep();  // Saves data for steps 3–4 and advances
+                        }
+                      }}
                       className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <span>Next</span>
@@ -1378,4 +1445,4 @@ const HomeLoanForm = () => {
   );
 };
 
-export default HomeLoanForm; 
+export default HomeLoanForm;

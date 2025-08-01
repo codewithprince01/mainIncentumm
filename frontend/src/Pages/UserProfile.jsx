@@ -91,7 +91,7 @@ const UserProfile = () => {
   const handleSaveProfile = async () => {
     try {
       const response = await axios.put(
-        '/api/users/profile',
+        '/users/profile',
         editData,
         { withCredentials: true }
       );

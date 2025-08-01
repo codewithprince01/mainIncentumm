@@ -21,7 +21,7 @@ export function UserContextProvider({ children }) {
     const fetchUserProfile = async () => {
       try {
         console.log('Fetching user profile from backend...');
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/profile`, {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/users/profile`, {
           withCredentials: true, // Send JWT cookie
         });
         console.log("Profile response:", response.data); // Debug log
@@ -78,7 +78,7 @@ export function UserContextProvider({ children }) {
     setReady(false);
     try {
       console.log('Manually refreshing user profile...');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/users/profile`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/users/profile`, {
         withCredentials: true,
       });
       if (response.data.success && response.data.data) {

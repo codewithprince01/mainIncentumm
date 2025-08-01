@@ -96,8 +96,8 @@ const BusinessLoanForm = () => {
   React.useEffect(() => {
     const createApplication = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/api/multistep/create', {
-          userId: user._id,
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
+          userId: user.id,
           loanType: 'business'
         });
         
@@ -120,7 +120,7 @@ const BusinessLoanForm = () => {
     if (!applicationId) return;
 
     try {
-      await axios.post('http://localhost:5000/api/multistep/save-step', {
+              await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/save-step`, {
         applicationId,
         step,
         stepData
@@ -137,6 +137,12 @@ const BusinessLoanForm = () => {
     
     switch (currentStep) {
       case 1:
+        // Validate required fields for step 1
+        if (!formData.fullName || !formData.phoneNumber) {
+          toast.error('Please fill in your name and phone number before proceeding.');
+          return;
+        }
+        
         stepData = {
           fullName: formData.fullName,
           fatherName: formData.fatherName,
@@ -221,11 +227,18 @@ const BusinessLoanForm = () => {
   const handleFinishApplication = async () => {
     setIsSubmitting(true);
     try {
+      // Always save step 1 data before submitting
+      await saveStepData(1, {
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        // ...other fields if needed
+      });
+
       // Save co-applicants data
       await saveStepData(5, { coApplicants });
-      
+
       // Submit application
-      const response = await axios.post('http://localhost:5000/api/multistep/submit', {
+              const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/submit`, {
         applicationId
       });
 
@@ -254,7 +267,7 @@ const BusinessLoanForm = () => {
       formData.append('documentType', documentType);
       formData.append('applicantType', 'main');
 
-      const response = await axios.post('http://localhost:5000/api/multistep/upload-document', formData, {
+              const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/upload-document`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -304,7 +317,7 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Father Name *
+              Father Name
             </label>
             <input
               type="text"
@@ -312,7 +325,6 @@ const BusinessLoanForm = () => {
               value={formData.fatherName}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
@@ -333,7 +345,7 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Email ID *
+              Email ID
             </label>
             <input
               type="email"
@@ -341,13 +353,12 @@ const BusinessLoanForm = () => {
               value={formData.email}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Date of Birth *
+              Date of Birth
             </label>
             <input
               type="date"
@@ -355,20 +366,18 @@ const BusinessLoanForm = () => {
               value={formData.dateOfBirth}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Gender *
+              Gender
             </label>
             <select
               name="gender"
               value={formData.gender}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
@@ -379,14 +388,13 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Qualification *
+              Qualification
             </label>
             <select
               name="qualification"
               value={formData.qualification}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Qualification</option>
               <option value="Graduate">Graduate</option>
@@ -400,14 +408,13 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Marital Status *
+              Marital Status
             </label>
             <select
               name="maritalStatus"
               value={formData.maritalStatus}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Marital Status</option>
               <option value="Single">Single</option>
@@ -441,14 +448,13 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Number of Dependents *
+              Number of Dependents
             </label>
             <select
               name="numberOfDependents"
               value={formData.numberOfDependents}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="0">0</option>
               <option value="1">1</option>
@@ -461,7 +467,7 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              PAN Number *
+              PAN Number
             </label>
             <input
               type="text"
@@ -471,20 +477,18 @@ const BusinessLoanForm = () => {
               pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
               placeholder="ABCDE1234F"
-              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Residence Type *
+              Residence Type
             </label>
             <select
               name="residenceType"
               value={formData.residenceType}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="">Select Residence Type</option>
               <option value="Owned">Owned</option>
@@ -496,14 +500,13 @@ const BusinessLoanForm = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-100 mb-2">
-              Citizenship *
+              Citizenship
             </label>
             <select
               name="citizenship"
               value={formData.citizenship}
               onChange={handleInputChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             >
               <option value="Indian">Indian</option>
               <option value="NRI">NRI</option>
@@ -520,40 +523,37 @@ const BusinessLoanForm = () => {
           <h3 className="text-lg font-semibold text-white mb-4">Permanent Address</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">State *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">State</label>
               <input
                 type="text"
                 name="permanentAddress.state"
                 value={formData.permanentAddress.state}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">District *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">District</label>
               <input
                 type="text"
                 name="permanentAddress.district"
                 value={formData.permanentAddress.district}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address</label>
               <textarea
                 name="permanentAddress.address"
                 value={formData.permanentAddress.address}
                 onChange={handleInputChange}
                 rows="3"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code</label>
               <input
                 type="text"
                 name="permanentAddress.pinCode"
@@ -561,7 +561,6 @@ const BusinessLoanForm = () => {
                 onChange={handleInputChange}
                 pattern="[0-9]{6}"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
           </div>
@@ -586,40 +585,37 @@ const BusinessLoanForm = () => {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">State *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">State</label>
               <input
                 type="text"
                 name="presentAddress.state"
                 value={formData.presentAddress.state}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">District *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">District</label>
               <input
                 type="text"
                 name="presentAddress.district"
                 value={formData.presentAddress.district}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Complete Address</label>
               <textarea
                 name="presentAddress.address"
                 value={formData.presentAddress.address}
                 onChange={handleInputChange}
                 rows="3"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code *</label>
+              <label className="block text-sm font-medium text-gray-100 mb-2">Pin Code</label>
               <input
                 type="text"
                 name="presentAddress.pinCode"
@@ -627,7 +623,6 @@ const BusinessLoanForm = () => {
                 onChange={handleInputChange}
                 pattern="[0-9]{6}"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
               />
             </div>
           </div>
@@ -776,7 +771,6 @@ const BusinessLoanForm = () => {
                   style={{
                     background: `linear-gradient(to right, #3B82F6 0%, #1D4ED8 ${((formData.loanAmountRequired || 100000) - 100000) / (50000000 - 100000) * 100}%, rgba(255,255,255,0.2) ${((formData.loanAmountRequired || 100000) - 100000) / (50000000 - 100000) * 100}%)`
                   }}
-                  required
                 />
                 
                 {/* Range markers */}

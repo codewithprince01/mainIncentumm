@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Environment variables
+.env
+.env.*
+
+# Coverage directory
+coverage/
+
+# Misc
+*.local
+*.cache
+*.pid
+
+# Ignore uploads (if storing user files locally)
+uploads/
+
+# Ignore test output
+*.test-results
+
+# Ignore build artifacts
+*.tgz
+
+# Ignore lock files (optional, if you don't want to commit them)
+# package-lock.json
+yarn.lock

@@ -51,8 +51,8 @@ const CoApplicantForm = () => {
   };
 
   const addCoApplicant = () => {
-    if (!currentCoApplicant.personalDetails.fullName || !currentCoApplicant.relationship) {
-      toast.error('Please fill in the required fields (Name and Relationship)');
+    if (!currentCoApplicant.personalDetails.fullName || !currentCoApplicant.personalDetails.phoneNumber) {
+      toast.error('Please fill in the required fields (Name and Phone Number)');
       return;
     }
 
@@ -129,13 +129,12 @@ const CoApplicantForm = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Relationship to Main Applicant *
+            Relationship to Main Applicant
           </label>
           <select
             value={currentCoApplicant.relationship}
             onChange={(e) => handleDirectChange('relationship', e.target.value)}
             className="w-full px-4 py-3 bg-white/10 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
-            required
           >
             <option value="">Select Relationship</option>
             <option value="spouse">Spouse</option>
@@ -179,7 +178,7 @@ const CoApplicantForm = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Phone Number
+            Phone Number *
           </label>
           <input
             type="tel"
@@ -187,6 +186,7 @@ const CoApplicantForm = () => {
             onChange={(e) => handleInputChange('personalDetails', 'phoneNumber', e.target.value)}
             className="w-full px-4 py-3 bg-white/10 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors"
             placeholder="Enter phone number"
+            required
           />
         </div>
 

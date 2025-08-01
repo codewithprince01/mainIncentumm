@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const personalDetailsSchema = new mongoose.Schema(
   {
-    full_name: { type: String },
+    full_name: { type: String, required: true },
     father_name: { type: String },
-    mobile_number: { type: String, match: /^[0-9]{10}$/ },
+    mobile_number: { type: String, required: true, match: /^[0-9]{10}$/ },
     email_id: {
       type: String,
       match: /\S+@\S+\.\S+/,
@@ -87,7 +87,7 @@ const loanApplicationSchema = new mongoose.Schema(
     property_address: { type: String },
     agreement_executed: { type: String },
     agreement_mou_value: { type: String }, // Changed to String to match frontend input
-    loan_amount_required: { type: String }, // Changed to String to match frontend input
+    loan_amount_required: { type: String }, // Optional - changed to String to match frontend input
     preferred_banks: { type: String },
     // vehicleDetails: {
     //   type: new mongoose.Schema({

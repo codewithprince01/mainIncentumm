@@ -32,11 +32,11 @@ const loanApplicationSchema = new mongoose.Schema({
   
   // Step 1: Personal Details & Address (Same for all loans)
   personalDetails: {
-    fullName: { type: String, required: true },
-    fatherName: { type: String, required: true },
+    fullName: { type: String, required: false },
+    fatherName: { type: String, required: false },
     phoneNumber: { 
       type: String, 
-      required: true,
+      required: false,
       validate: {
         validator: function(v) {
           return /^[0-9]{10}$/.test(v);
@@ -44,96 +44,28 @@ const loanApplicationSchema = new mongoose.Schema({
         message: 'Phone number must be 10 digits'
       }
     },
-    email: { 
-      type: String, 
-      required: true,
-      validate: {
-        validator: function(v) {
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-        },
-        message: 'Please provide a valid email'
-      }
-    },
-    dateOfBirth: { type: Date, required: true },
-    gender: { 
-      type: String, 
-      required: true,
-      enum: ['Male', 'Female', 'Other']
-    },
-    qualification: { 
-      type: String, 
-      required: true,
-      enum: ['Graduate', 'Post Graduate', 'Professional', 'Others']
-    },
-    employmentType: { 
-      type: String, 
-      required: true,
-      enum: ['Salaried', 'Self-Employed', 'Professional', 'Business']
-    },
-    maritalStatus: { 
-      type: String, 
-      required: true,
-      enum: ['Single', 'Married', 'Divorced', 'Widowed']
-    },
-    spouseEmploymentType: { 
-      type: String,
-      enum: ['Salaried', 'Self-Employed', 'Professional', 'Business', 'Housewife', 'Unemployed']
-    },
-    numberOfDependents: { 
-      type: Number, 
-      required: true,
-      min: 0,
-      max: 10
-    },
-    panNumber: { 
-      type: String, 
-      required: true,
-      validate: {
-        validator: function(v) {
-          return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v);
-        },
-        message: 'Please provide a valid PAN number'
-      }
-    },
-    residenceType: { 
-      type: String, 
-      required: true,
-      enum: ['Owned', 'Rented', 'Parental', 'Company Provided']
-    },
-    citizenship: { 
-      type: String, 
-      required: true,
-      enum: ['Indian', 'NRI', 'Foreign National']
-    },
+    email: { type: String, required: false },
+    dateOfBirth: { type: Date, required: false },
+    gender: { type: String, required: false, enum: ['Male', 'Female', 'Other'] },
+    qualification: { type: String, required: false, enum: ['Graduate', 'Post Graduate', 'Professional', 'Others'] },
+    employmentType: { type: String, required: false, enum: ['Salaried', 'Self-Employed', 'Professional', 'Business'] },
+    maritalStatus: { type: String, required: false, enum: ['Single', 'Married', 'Divorced', 'Widowed'] },
+    spouseEmploymentType: { type: String, enum: ['Salaried', 'Self-Employed', 'Professional', 'Business', 'Housewife', 'Unemployed'] },
+    numberOfDependents: { type: Number, required: false, min: 0, max: 10 },
+    panNumber: { type: String, required: false, validate: { validator: function(v) { return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v); }, message: 'Please provide a valid PAN number' } },
+    residenceType: { type: String, required: false, enum: ['Owned', 'Rented', 'Parental', 'Company Provided'] },
+    citizenship: { type: String, required: false, enum: ['Indian', 'NRI', 'Foreign National'] },
     permanentAddress: {
-      state: { type: String, required: true },
-      district: { type: String, required: true },
-      address: { type: String, required: true },
-      pinCode: { 
-        type: String, 
-        required: true,
-        validate: {
-          validator: function(v) {
-            return /^[0-9]{6}$/.test(v);
-          },
-          message: 'Pin code must be 6 digits'
-        }
-      }
+      state: { type: String, required: false },
+      district: { type: String, required: false },
+      address: { type: String, required: false },
+      pinCode: { type: String, required: false, validate: { validator: function(v) { return /^[0-9]{6}$/.test(v); }, message: 'Pin code must be 6 digits' } }
     },
     presentAddress: {
-      state: { type: String, required: true },
-      district: { type: String, required: true },
-      address: { type: String, required: true },
-      pinCode: { 
-        type: String, 
-        required: true,
-        validate: {
-          validator: function(v) {
-            return /^[0-9]{6}$/.test(v);
-          },
-          message: 'Pin code must be 6 digits'
-        }
-      }
+      state: { type: String, required: false },
+      district: { type: String, required: false },
+      address: { type: String, required: false },
+      pinCode: { type: String, required: false, validate: { validator: function(v) { return /^[0-9]{6}$/.test(v); }, message: 'Pin code must be 6 digits' } }
     }
   },
 
@@ -156,7 +88,7 @@ const loanApplicationSchema = new mongoose.Schema({
     // Common for all loans
     loanAmountRequired: { 
       type: Number, 
-      required: true,
+      required: false,
       min: [10000, 'Minimum loan amount is ₹10,000']
     },
     preferredBanks: [{ type: String }]
@@ -220,7 +152,7 @@ const loanApplicationSchema = new mongoose.Schema({
   coApplicants: [{
     personalDetails: {
       fullName: { type: String, required: true },
-      fatherName: { type: String, required: true },
+      fatherName: { type: String, required: false },
       phoneNumber: { 
         type: String, 
         required: true,
@@ -231,96 +163,28 @@ const loanApplicationSchema = new mongoose.Schema({
           message: 'Phone number must be 10 digits'
         }
       },
-      email: { 
-        type: String, 
-        required: true,
-        validate: {
-          validator: function(v) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-          },
-          message: 'Please provide a valid email'
-        }
-      },
-      dateOfBirth: { type: Date, required: true },
-      gender: { 
-        type: String, 
-        required: true,
-        enum: ['Male', 'Female', 'Other']
-      },
-      qualification: { 
-        type: String, 
-        required: true,
-        enum: ['Graduate', 'Post Graduate', 'Professional', 'Others']
-      },
-      employmentType: { 
-        type: String, 
-        required: true,
-        enum: ['Salaried', 'Self-Employed', 'Professional', 'Business']
-      },
-      maritalStatus: { 
-        type: String, 
-        required: true,
-        enum: ['Single', 'Married', 'Divorced', 'Widowed']
-      },
-      spouseEmploymentType: { 
-        type: String,
-        enum: ['Salaried', 'Self-Employed', 'Professional', 'Business', 'Housewife', 'Unemployed']
-      },
-      numberOfDependents: { 
-        type: Number, 
-        required: true,
-        min: 0,
-        max: 10
-      },
-      panNumber: { 
-        type: String, 
-        required: true,
-        validate: {
-          validator: function(v) {
-            return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v);
-          },
-          message: 'Please provide a valid PAN number'
-        }
-      },
-      residenceType: { 
-        type: String, 
-        required: true,
-        enum: ['Owned', 'Rented', 'Parental', 'Company Provided']
-      },
-      citizenship: { 
-        type: String, 
-        required: true,
-        enum: ['Indian', 'NRI', 'Foreign National']
-      },
+      email: { type: String, required: false },
+      dateOfBirth: { type: Date, required: false },
+      gender: { type: String, required: false, enum: ['Male', 'Female', 'Other'] },
+      qualification: { type: String, required: false, enum: ['Graduate', 'Post Graduate', 'Professional', 'Others'] },
+      employmentType: { type: String, required: false, enum: ['Salaried', 'Self-Employed', 'Professional', 'Business'] },
+      maritalStatus: { type: String, required: false, enum: ['Single', 'Married', 'Divorced', 'Widowed'] },
+      spouseEmploymentType: { type: String, enum: ['Salaried', 'Self-Employed', 'Professional', 'Business', 'Housewife', 'Unemployed'] },
+      numberOfDependents: { type: Number, required: false, min: 0, max: 10 },
+      panNumber: { type: String, required: false, validate: { validator: function(v) { return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v); }, message: 'Please provide a valid PAN number' } },
+      residenceType: { type: String, required: false, enum: ['Owned', 'Rented', 'Parental', 'Company Provided'] },
+      citizenship: { type: String, required: false, enum: ['Indian', 'NRI', 'Foreign National'] },
       permanentAddress: {
-        state: { type: String, required: true },
-        district: { type: String, required: true },
-        address: { type: String, required: true },
-        pinCode: { 
-          type: String, 
-          required: true,
-          validate: {
-            validator: function(v) {
-              return /^[0-9]{6}$/.test(v);
-            },
-            message: 'Pin code must be 6 digits'
-          }
-        }
+        state: { type: String, required: false },
+        district: { type: String, required: false },
+        address: { type: String, required: false },
+        pinCode: { type: String, required: false, validate: { validator: function(v) { return /^[0-9]{6}$/.test(v); }, message: 'Pin code must be 6 digits' } }
       },
       presentAddress: {
-        state: { type: String, required: true },
-        district: { type: String, required: true },
-        address: { type: String, required: true },
-        pinCode: { 
-          type: String, 
-          required: true,
-          validate: {
-            validator: function(v) {
-              return /^[0-9]{6}$/.test(v);
-            },
-            message: 'Pin code must be 6 digits'
-          }
-        }
+        state: { type: String, required: false },
+        district: { type: String, required: false },
+        address: { type: String, required: false },
+        pinCode: { type: String, required: false, validate: { validator: function(v) { return /^[0-9]{6}$/.test(v); }, message: 'Pin code must be 6 digits' } }
       }
     },
     employmentDetails: {
@@ -354,7 +218,6 @@ const loanApplicationSchema = new mongoose.Schema({
     documents: [{
       documentType: { 
         type: String, 
-        required: true,
         enum: [
           // Common documents
           'panCard', 'aadharCard', 'existingLoanStatement', 'itr', 'nocLoanClosure',
@@ -366,8 +229,8 @@ const loanApplicationSchema = new mongoose.Schema({
           'drivingLicense'
         ]
       },
-      fileName: { type: String, required: true },
-      filePath: { type: String, required: true },
+      fileName: { type: String },
+      filePath: { type: String },
       uploadedAt: { type: Date, default: Date.now },
       verified: { type: Boolean, default: false }
     }]

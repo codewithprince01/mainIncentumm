@@ -113,26 +113,37 @@ const saveStepData = asyncHandler(async (req, res) => {
       });
     }
 
+    // Helper function to clean empty strings for enum fields
+    const cleanEnumFields = (data) => {
+      const cleaned = { ...data };
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] === '') {
+          cleaned[key] = undefined;
+        }
+      });
+      return cleaned;
+    };
+
     // Update step data based on step number
     switch (step) {
       case 1: // Personal Details & Address
         application.personalDetails = {
           ...application.personalDetails,
-          ...stepData
+          ...cleanEnumFields(stepData)
         };
         break;
         
       case 2: // Loan/Property/Vehicle Specific Details
         application.loanSpecificDetails = {
           ...application.loanSpecificDetails,
-          ...stepData
+          ...cleanEnumFields(stepData)
         };
         break;
         
       case 3: // Employment Details
         application.employmentDetails = {
           ...application.employmentDetails,
-          ...stepData
+          ...cleanEnumFields(stepData)
         };
         break;
         
@@ -142,7 +153,16 @@ const saveStepData = asyncHandler(async (req, res) => {
         
       case 5: // Co-Applicants
         if (stepData.coApplicants) {
-          application.coApplicants = stepData.coApplicants;
+          // Clean enum fields for co-applicants
+          const cleanedCoApplicants = stepData.coApplicants.map(coApplicant => ({
+            ...coApplicant,
+            personalDetails: cleanEnumFields(coApplicant.personalDetails || {}),
+            employmentDetails: cleanEnumFields(coApplicant.employmentDetails || {})
+          }));
+          // Filter out empty co-applicants (no name and no phone)
+          application.coApplicants = cleanedCoApplicants.filter(
+            co => co && co.personalDetails && (co.personalDetails.fullName || co.personalDetails.phoneNumber)
+          );
         }
         break;
         
@@ -151,6 +171,13 @@ const saveStepData = asyncHandler(async (req, res) => {
           success: false,
           message: "Invalid step number"
         });
+    }
+
+    // Filter out empty co-applicants before saving (defensive, for all steps)
+    if (Array.isArray(application.coApplicants)) {
+      application.coApplicants = application.coApplicants.filter(
+        co => co && co.personalDetails && (co.personalDetails.fullName || co.personalDetails.phoneNumber)
+      );
     }
 
     // Update current step if progressing forward
@@ -354,6 +381,13 @@ const submitApplication = asyncHandler(async (req, res) => {
       });
     }
 
+    // Defensive: filter out empty co-applicants before validation and saving
+    if (Array.isArray(application.coApplicants)) {
+      application.coApplicants = application.coApplicants.filter(
+        co => co && co.personalDetails && (co.personalDetails.fullName || co.personalDetails.phoneNumber)
+      );
+    }
+
     // Validate that all required steps are completed
     const validationErrors = validateApplication(application);
     if (validationErrors.length > 0) {
@@ -413,35 +447,44 @@ const getStepData = (application, step) => {
 const validateApplication = (application) => {
   const errors = [];
 
-  // Validate personal details
+  // Validate personal details - only name and phone number required
   if (!application.personalDetails?.fullName) {
     errors.push("Full name is required");
-  }
-  if (!application.personalDetails?.email) {
-    errors.push("Email is required");
   }
   if (!application.personalDetails?.phoneNumber) {
     errors.push("Phone number is required");
   }
 
-  // Validate loan specific details
-  if (!application.loanSpecificDetails?.loanAmountRequired) {
-    errors.push("Loan amount is required");
+  // Validate co-applicants - only name and phone number required
+  if (Array.isArray(application.coApplicants)) {
+    application.coApplicants.forEach((co, idx) => {
+      if (!co.personalDetails?.fullName) {
+        errors.push(`Co-applicant ${idx + 1}: Full name is required`);
+      }
+      if (!co.personalDetails?.phoneNumber) {
+        errors.push(`Co-applicant ${idx + 1}: Phone number is required`);
+      }
+    });
   }
 
-  // Validate employment details
-  if (!application.employmentDetails || Object.keys(application.employmentDetails).length === 0) {
-    errors.push("Employment details are required");
-  }
+  // Validate loan specific details - loan amount is optional
+  // if (!application.loanSpecificDetails?.loanAmountRequired) {
+  //   errors.push("Loan amount is required");
+  // }
 
-  // Validate documents based on loan type and employment type
-  const requiredDocuments = getRequiredDocuments(application.loanType, application.personalDetails?.employmentType);
-  const uploadedDocuments = application.documents?.map(doc => doc.documentType) || [];
+  // Validate employment details - employment details are optional
+  // if (!application.employmentDetails || Object.keys(application.employmentDetails).length === 0) {
+  //   errors.push("Employment details are required");
+  // }
+
+  // Validate documents - documents are optional for now
+  // const requiredDocuments = getRequiredDocuments(application.loanType, application.personalDetails?.employmentType);
+  // const uploadedDocuments = application.documents?.map(doc => doc.documentType) || [];
   
-  const missingDocuments = requiredDocuments.filter(doc => !uploadedDocuments.includes(doc));
-  if (missingDocuments.length > 0) {
-    errors.push(`Missing required documents: ${missingDocuments.join(', ')}`);
-  }
+  // const missingDocuments = requiredDocuments.filter(doc => !uploadedDocuments.includes(doc));
+  // if (missingDocuments.length > 0) {
+  //   errors.push(`Missing required documents: ${missingDocuments.join(', ')}`);
+  // }
 
   return errors;
 };
