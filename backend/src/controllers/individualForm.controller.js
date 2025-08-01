@@ -369,7 +369,7 @@ const fetchFormById = asyncHandler(async (req, res) => {
 
     // Use HTTPS and correct uploads path
     const baseUrl = process.env.NODE_ENV === "production" 
-      ? "https://incentum.ai/" 
+      ? "https://incentum.ai/uploads/" 
       : "http://localhost:8080/";
     const updatedLoanDocuments = form.loanDocuments.map((doc) => {
       const updatedDoc = {};
