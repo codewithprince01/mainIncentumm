@@ -25,6 +25,10 @@ Thumbs.db
 # Environment variables
 .env
 .env.*
+/backend/.env
+/backend/.env.*
+/frontend/.env
+/frontend/.env.*
 
 # Coverage directory
 coverage/
