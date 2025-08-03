@@ -99,6 +99,8 @@ const BusinessLoanForm = () => {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
           userId: user.id,
           loanType: 'business'
+        }, {
+          withCredentials: true
         });
         
         if (response.data.success) {
@@ -124,6 +126,8 @@ const BusinessLoanForm = () => {
         applicationId,
         step,
         stepData
+      }, {
+        withCredentials: true
       });
     } catch (error) {
       console.error('Error saving step data:', error);
@@ -186,10 +190,14 @@ const BusinessLoanForm = () => {
 
     await saveStepData(currentStep, stepData);
     setCurrentStep(prev => prev + 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Co-applicant handlers
@@ -240,11 +248,13 @@ const BusinessLoanForm = () => {
       // Submit application
               const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/submit`, {
         applicationId
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
         toast.success('Business loan application submitted successfully!');
-        navigate('/user/applications');
+        navigate('/application-submitted-successfully');
       }
     } catch (error) {
       console.error('Error submitting application:', error);
@@ -268,7 +278,8 @@ const BusinessLoanForm = () => {
       formData.append('applicantType', 'main');
 
               const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/upload-document`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
       });
 
       if (response.data.success) {

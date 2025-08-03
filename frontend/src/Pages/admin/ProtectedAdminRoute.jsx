@@ -18,7 +18,7 @@ const ProtectedAdminRoute = ({ children }) => {
       hasChecked.current = true;
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/admin/profile`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/admin/profile`,
           { withCredentials: true }
         );
         

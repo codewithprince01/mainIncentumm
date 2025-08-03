@@ -198,7 +198,7 @@ const ApplicationViewModal = ({ isOpen, onClose, applicationId, onEdit }) => {
                   <div>
                     <p className="text-sm text-gray-700 font-medium">Requested Amount</p>
                     <p className="font-bold text-gray-900 text-lg">
-                      ₹{(application.loanAmount || application.loanApplication?.loan_amount_required || 0).toLocaleString()}
+                      ₹{(application.loanSpecificDetails?.loanAmountRequired || application.loanAmount || application.loanApplication?.loan_amount_required || 0).toLocaleString()}
                     </p>
                   </div>
                   <div>
@@ -269,29 +269,282 @@ const ApplicationViewModal = ({ isOpen, onClose, applicationId, onEdit }) => {
                     Personal Details
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {application.personalDetails.fatherName && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Father Name</p>
+                        <p className="font-semibold text-gray-900">{application.personalDetails.fatherName}</p>
+                      </div>
+                    )}
                     {application.personalDetails.gender && (
                       <div>
-                        <p className="text-sm text-gray-700 font-medium">Gender</p>
-                        <p className="font-bold text-gray-900 capitalize">{application.personalDetails.gender}</p>
+                        <p className="text-sm text-gray-600 font-medium">Gender</p>
+                        <p className="font-semibold text-gray-900 capitalize">{application.personalDetails.gender}</p>
                       </div>
                     )}
                     {application.personalDetails.maritalStatus && (
                       <div>
-                        <p className="text-sm text-gray-700 font-medium">Marital Status</p>
-                        <p className="font-bold text-gray-900 capitalize">{application.personalDetails.maritalStatus}</p>
+                        <p className="text-sm text-gray-600 font-medium">Marital Status</p>
+                        <p className="font-semibold text-gray-900 capitalize">{application.personalDetails.maritalStatus}</p>
                       </div>
                     )}
-                    {application.personalDetails.alternatePhone && (
+                    {application.personalDetails.qualification && (
                       <div>
-                        <p className="text-sm text-gray-700 font-medium">Alternate Phone</p>
-                        <p className="font-bold text-gray-900">{application.personalDetails.alternatePhone}</p>
+                        <p className="text-sm text-gray-600 font-medium">Qualification</p>
+                        <p className="font-semibold text-gray-900">{application.personalDetails.qualification}</p>
+                      </div>
+                    )}
+                    {application.personalDetails.numberOfDependents !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Number of Dependents</p>
+                        <p className="font-semibold text-gray-900">{application.personalDetails.numberOfDependents}</p>
+                      </div>
+                    )}
+                    {application.personalDetails.panNumber && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">PAN Number</p>
+                        <p className="font-semibold text-gray-900 uppercase">{application.personalDetails.panNumber}</p>
+                      </div>
+                    )}
+                    {application.personalDetails.residenceType && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Residence Type</p>
+                        <p className="font-semibold text-gray-900">{application.personalDetails.residenceType}</p>
+                      </div>
+                    )}
+                    {application.personalDetails.citizenship && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Citizenship</p>
+                        <p className="font-semibold text-gray-900">{application.personalDetails.citizenship}</p>
                       </div>
                     )}
                   </div>
                   
-                  {application.personalDetails.address && (
+                  {/* Address Information */}
+                  {(application.personalDetails.permanentAddress || application.personalDetails.presentAddress) && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <h4 className="text-md font-semibold text-gray-900 mb-4">Address Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {application.personalDetails.permanentAddress && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h5 className="font-medium text-gray-900 mb-2">Permanent Address</h5>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              {application.personalDetails.permanentAddress.address && (
+                                <p>{application.personalDetails.permanentAddress.address}</p>
+                              )}
+                              {application.personalDetails.permanentAddress.district && (
+                                <p>{application.personalDetails.permanentAddress.district}</p>
+                              )}
+                              {application.personalDetails.permanentAddress.state && (
+                                <p>{application.personalDetails.permanentAddress.state}</p>
+                              )}
+                              {application.personalDetails.permanentAddress.pinCode && (
+                                <p>PIN: {application.personalDetails.permanentAddress.pinCode}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {application.personalDetails.presentAddress && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h5 className="font-medium text-gray-900 mb-2">Present Address</h5>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              {application.personalDetails.presentAddress.address && (
+                                <p>{application.personalDetails.presentAddress.address}</p>
+                              )}
+                              {application.personalDetails.presentAddress.district && (
+                                <p>{application.personalDetails.presentAddress.district}</p>
+                              )}
+                              {application.personalDetails.presentAddress.state && (
+                                <p>{application.personalDetails.presentAddress.state}</p>
+                              )}
+                              {application.personalDetails.presentAddress.pinCode && (
+                                <p>PIN: {application.personalDetails.presentAddress.pinCode}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Loan Specific Details */}
+              {application.loanSpecificDetails && Object.keys(application.loanSpecificDetails).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <FiDollarSign className="w-5 h-5 mr-2 text-green-600" />
+                    Loan Specific Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {application.loanSpecificDetails.loanAmountRequired && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Loan Amount Required</p>
+                        <p className="font-semibold text-gray-900">₹{application.loanSpecificDetails.loanAmountRequired.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.propertyAddress && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Property Address</p>
+                        <p className="font-semibold text-gray-900">{application.loanSpecificDetails.propertyAddress}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.propertyFinalised !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Property Finalised</p>
+                        <p className="font-semibold text-gray-900">{application.loanSpecificDetails.propertyFinalised ? 'Yes' : 'No'}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.agreementExecuted !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Agreement Executed</p>
+                        <p className="font-semibold text-gray-900">{application.loanSpecificDetails.agreementExecuted ? 'Yes' : 'No'}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.agreementValue && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Agreement Value</p>
+                        <p className="font-semibold text-gray-900">₹{application.loanSpecificDetails.agreementValue.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.vehicleMake && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Vehicle Make</p>
+                        <p className="font-semibold text-gray-900">{application.loanSpecificDetails.vehicleMake}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.vehicleModel && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Vehicle Model</p>
+                        <p className="font-semibold text-gray-900">{application.loanSpecificDetails.vehicleModel}</p>
+                      </div>
+                    )}
+                    {application.loanSpecificDetails.vehiclePrice && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Vehicle Price</p>
+                        <p className="font-semibold text-gray-900">₹{application.loanSpecificDetails.vehiclePrice.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                  {application.loanSpecificDetails.preferredBanks && application.loanSpecificDetails.preferredBanks.length > 0 && (
                     <div className="mt-4">
-                      <p className="text-sm text-gray-700 font-medium mb-2">Address</p>
+                      <p className="text-sm text-gray-600 font-medium mb-2">Preferred Banks</p>
+                      <div className="flex flex-wrap gap-2">
+                        {application.loanSpecificDetails.preferredBanks.map((bank, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                            {bank}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Employment Details */}
+              {application.employmentDetails && Object.keys(application.employmentDetails).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <FiUser className="w-5 h-5 mr-2 text-purple-600" />
+                    Employment Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Salaried Employee Details */}
+                    {application.employmentDetails.organisationName && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Organisation Name</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.organisationName}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.organisationType && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Organisation Type</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.organisationType}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.designation && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Designation</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.designation}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.experienceCurrentOrg && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Experience (Current Org)</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.experienceCurrentOrg} years</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.experiencePreviousOrg && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Experience (Previous Org)</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.experiencePreviousOrg} years</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.monthlySalary && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Monthly Salary</p>
+                        <p className="font-semibold text-gray-900">₹{application.employmentDetails.monthlySalary.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.placeOfPosting && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Place of Posting</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.placeOfPosting}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.salaryBank && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Salary Bank</p>
+                        <p className="font-semibold text-gray-900 uppercase">{application.employmentDetails.salaryBank}</p>
+                      </div>
+                    )}
+                    
+                    {/* Business/Self-Employed Details */}
+                    {application.employmentDetails.firmName && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Firm Name</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.firmName}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.firmType && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Firm Type</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.firmType}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.businessDesignation && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Business Designation</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.businessDesignation}</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.yearsInBusiness && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Years in Business</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.yearsInBusiness} years</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.yearsOfITRFiling && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Years of ITR Filing</p>
+                        <p className="font-semibold text-gray-900">{application.employmentDetails.yearsOfITRFiling} years</p>
+                      </div>
+                    )}
+                    {application.employmentDetails.firmRegistrationDate && (
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Firm Registration Date</p>
+                        <p className="font-semibold text-gray-900">{new Date(application.employmentDetails.firmRegistrationDate).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Employment Details */}
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <FiUser className="w-5 h-5 mr-2 text-purple-600" />
+                  Employment Details
+                </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-gray-800">
                           {[

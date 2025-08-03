@@ -12,7 +12,8 @@ const {
   updateApplicationById,
   downloadApplicationPDF,
   createDefaultAdmin,
-  downloadDocument
+  downloadDocument,
+  serveDocument
 } = require("../controllers/admin.controller");
 const { verifyAdminJWT, checkPermission, requireSuperAdmin } = require("../middleware/adminAuth.middleware");
 
@@ -44,6 +45,9 @@ router.get("/applications/:applicationId/download", checkPermission("read_applic
 
 // Download individual document
 router.get("/applications/:applicationId/documents/:documentType/:applicantIndex", checkPermission("read_applications"), downloadDocument);
+
+// Serve document for viewing
+router.get("/applications/:applicationId/documents/:documentId", checkPermission("read_applications"), serveDocument);
 
 // Admin management routes (super admin only)
 router.post("/register", requireSuperAdmin, registerAdmin);

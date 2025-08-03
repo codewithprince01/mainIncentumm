@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/admin/login`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/admin/login`,
         formData,
         {
           withCredentials: true,

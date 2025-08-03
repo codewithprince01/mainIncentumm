@@ -1,6 +1,7 @@
 const { Admin } = require("../models/authentication/Admin.models");
 const { User } = require("../models/authentication/User.models");
 const { LoanApplication } = require("../models/LoanApplication.model");
+const Form = require("../models/individualForms/FormOne.model");
 const { ApiError } = require("../utils/ApiError");
 const { ApiResponse } = require("../utils/ApiResponse");
 const { asyncHandler } = require("../utils/asyncHandler");
@@ -331,6 +332,19 @@ const getAllLoanApplications = asyncHandler(async (req, res) => {
     .sort({ [sortBy]: sortOrder })
     .lean();
 
+  console.log('🔍 Admin - Found loan applications:', loanApplications.length);
+  if (loanApplications.length > 0) {
+    console.log('🔍 Admin - First application structure:', {
+      id: loanApplications[0]._id,
+      hasPersonalDetails: !!loanApplications[0].personalDetails,
+      personalDetailsKeys: loanApplications[0].personalDetails ? Object.keys(loanApplications[0].personalDetails) : 'none',
+      hasEmploymentDetails: !!loanApplications[0].employmentDetails,
+      employmentDetailsKeys: loanApplications[0].employmentDetails ? Object.keys(loanApplications[0].employmentDetails) : 'none',
+      hasLoanSpecificDetails: !!loanApplications[0].loanSpecificDetails,
+      loanSpecificDetailsKeys: loanApplications[0].loanSpecificDetails ? Object.keys(loanApplications[0].loanSpecificDetails) : 'none'
+    });
+  }
+
   // Then try Form model
   const formQuery = {};
   if (status) formQuery.status = status;
@@ -353,7 +367,7 @@ const getAllLoanApplications = asyncHandler(async (req, res) => {
       ...app,
       applicationId: app.applicationId || app._id,
       loanType: app.loanType,
-      loanAmount: app.loanAmount,
+      loanAmount: app.loanSpecificDetails?.loanAmountRequired || 0,
       userId: app.userId
     })),
     ...formApplications.map(form => ({
@@ -387,6 +401,504 @@ const getAllLoanApplications = asyncHandler(async (req, res) => {
       totalApplications: allApplications.length
     }, "Loan applications retrieved successfully")
   );
+});
+
+// Get Single Application by ID
+const getApplicationById = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  console.log('🔍 Admin - Fetching application by ID:', applicationId);
+
+  // Try to find in both LoanApplication and Form models
+  let application = await LoanApplication.findById(applicationId)
+    .populate('userId', 'name email phoneNumber');
+
+  if (application) {
+    console.log('🔍 Admin - Found application in LoanApplication model:', {
+      id: application._id,
+      loanType: application.loanType,
+      status: application.status,
+      hasPersonalDetails: !!application.personalDetails,
+      personalDetailsKeys: application.personalDetails ? Object.keys(application.personalDetails) : 'none',
+      personalDetailsData: application.personalDetails,
+      hasEmploymentDetails: !!application.employmentDetails,
+      employmentDetailsKeys: application.employmentDetails ? Object.keys(application.employmentDetails) : 'none',
+      employmentDetailsData: application.employmentDetails,
+      hasLoanSpecificDetails: !!application.loanSpecificDetails,
+      loanSpecificDetailsKeys: application.loanSpecificDetails ? Object.keys(application.loanSpecificDetails) : 'none',
+      loanSpecificDetailsData: application.loanSpecificDetails
+    });
+  }
+
+  if (!application) {
+    console.log('🔍 Admin - Not found in LoanApplication, trying Form model');
+    // Try to find in Form model
+    application = await Form.findById(applicationId)
+      .populate('user', 'name email phoneNumber');
+      
+    if (application) {
+      console.log('🔍 Admin - Found application in Form model');
+    }
+  }
+
+  if (!application) {
+    console.log('❌ Admin - Application not found in either model');
+    throw new ApiError(404, "Application not found");
+  }
+
+  console.log('✅ Admin - Sending application response');
+  res.status(200).json(
+    new ApiResponse(200, application, "Application details retrieved successfully")
+  );
+});
+
+// Serve Document File
+const serveDocument = asyncHandler(async (req, res) => {
+  const { applicationId, documentId } = req.params;
+  try {
+    console.log(`Serving document: applicationId=${applicationId}, documentId=${documentId}`);
+    let application = await LoanApplication.findById(applicationId);
+    let form = null;
+    if (!application) {
+      form = await Form.findById(applicationId);
+    }
+    if (!application && !form) {
+      throw new ApiError(404, "Application not found");
+    }
+    let documentPath = null;
+    let documentName = null;
+    let foundDoc = null;
+
+    // 1. Search in LoanApplication model's main documents
+    if (application && application.documents && application.documents.length > 0) {
+      foundDoc = application.documents.find(d => d._id.toString() === documentId);
+      if (foundDoc) {
+        documentPath = foundDoc.filePath || foundDoc.path;
+        documentName = foundDoc.fileName || foundDoc.filename || foundDoc.originalname;
+        console.log(`Found document in LoanApplication.documents: ${documentPath}`);
+      }
+    }
+    
+    // 2. If not found, search in Form model's loanDocuments
+    if (!foundDoc && form && form.loanDocuments && form.loanDocuments.length > 0) {
+      foundDoc = form.loanDocuments.find(d => d._id.toString() === documentId);
+      if (foundDoc) {
+        documentPath = foundDoc.filePath || foundDoc.path;
+        documentName = foundDoc.fileName || foundDoc.filename || foundDoc.originalname;
+        console.log(`Found document in Form.loanDocuments: ${documentPath}`);
+      }
+    }
+
+    // 3. If not found, search within coApplicants documents (for LoanApplication model)
+    if (!foundDoc && application && application.coApplicants && application.coApplicants.length > 0) {
+        for (const coApplicant of application.coApplicants) {
+            if (coApplicant.documents && coApplicant.documents.length > 0) {
+                foundDoc = coApplicant.documents.find(d => d._id.toString() === documentId);
+                if (foundDoc) {
+                    documentPath = foundDoc.filePath || foundDoc.path;
+                    documentName = foundDoc.fileName || foundDoc.filename || foundDoc.originalname;
+                    console.log(`Found document in coApplicant.documents: ${documentPath}`);
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!documentPath) {
+      console.log(`Document not found by ID: ${documentId} for application ${applicationId}`);
+      throw new ApiError(404, "Document not found");
+    }
+    
+    const fs = require('fs');
+    const path = require('path');
+    const cleanPath = documentPath.replace(/^\/+/, '');
+    const fullPath = path.join(process.cwd(), cleanPath);
+    
+    console.log(`Attempting to access file: ${fullPath}`);
+    if (!fs.existsSync(fullPath)) {
+      console.log(`File not found on disk: ${fullPath}`);
+      throw new ApiError(404, "Document file not found on server");
+    }
+    
+    const stats = fs.statSync(fullPath);
+    const fileExtension = path.extname(fullPath).toLowerCase();
+    
+    let contentType = 'application/octet-stream';
+    if (fileExtension === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (['.jpg', '.jpeg'].includes(fileExtension)) {
+      contentType = 'image/jpeg';
+    } else if (fileExtension === '.png') {
+      contentType = 'image/png';
+    } else if (['.doc', '.docx'].includes(fileExtension)) {
+      contentType = 'application/msword';
+    }
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Content-Disposition', `inline; filename="${documentName || path.basename(fullPath)}"`);
+    
+    console.log(`Streaming file: ${fullPath} (${stats.size} bytes)`);
+    const fileStream = fs.createReadStream(fullPath);
+    fileStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error serving document:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "Failed to serve document");
+  }
+});
+
+// Download Application as PDF
+const downloadApplicationPDF = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  // Try to find in both models
+  let application = await LoanApplication.findById(applicationId)
+    .populate('userId', 'name email phoneNumber');
+
+  if (!application) {
+    application = await Form.findById(applicationId)
+      .populate('user', 'name email phoneNumber');
+  }
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  // Create PDF with professional styling and indigo theme
+  const doc = new PDFDocument({ 
+    margin: 40,
+    size: 'A4',
+    info: {
+      Title: `Loan Application - ${application.applicationId || application._id}`,
+      Author: 'Incentum Financial Services',
+      Subject: 'Official Loan Application Report',
+      Keywords: 'loan, application, finance, official, incentum'
+    }
+  });
+  
+  // Set response headers
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="Official-Application-${application.applicationId || application._id}.pdf"`);
+  
+  // Pipe PDF to response
+  doc.pipe(res);
+
+  // Define professional indigo color scheme
+  const primaryColor = '#312e81'; // Indigo-950
+  const secondaryColor = '#6366f1'; // Indigo-500
+  const accentColor = '#4f46e5'; // Indigo-600
+  const lightColor = '#e0e7ff'; // Indigo-100
+  const textColor = '#1e1b4b'; // Indigo-950
+  const mutedColor = '#64748b'; // Slate-500
+
+  // Helper function to add professional header
+  const addPageHeader = () => {
+    // Gradient background for header
+    const gradient = doc.linearGradient(0, 0, doc.page.width, 70);
+    gradient.stop(0, primaryColor).stop(1, secondaryColor);
+    doc.rect(0, 0, doc.page.width, 70).fill(gradient);
+    
+    // Company name with elegant styling
+    doc.fillColor('white')
+       .fontSize(28)
+       .font('Helvetica-Bold')
+       .text('INCENTUM', 40, 15);
+    
+    doc.fontSize(16)
+       .font('Helvetica')
+       .text('FINANCIAL SERVICES', 40, 45);
+    
+    // Official seal area (decorative circle)
+    doc.circle(doc.page.width - 80, 35, 25).stroke('white');
+    doc.fontSize(8).text('OFFICIAL', doc.page.width - 95, 30, { align: 'center', width: 30 });
+    doc.text('REPORT', doc.page.width - 95, 40, { align: 'center', width: 30 });
+    
+    doc.y = 90;
+  };
+
+  // Helper function to add section with indigo styling
+  const addSectionHeader = (title, icon = '■') => {
+    if (doc.y > 720) {
+      doc.addPage();
+      addPageHeader();
+    }
+    
+    doc.rect(40, doc.y, doc.page.width - 80, 30).fill(lightColor);
+    doc.fillColor(primaryColor)
+       .fontSize(14)
+       .font('Helvetica-Bold')
+       .text(`${icon} ${title}`, 50, doc.y + 8);
+    
+    doc.y += 40;
+    doc.fillColor(textColor);
+  };
+
+  // Helper function to add field with better formatting
+  const addField = (label, value, options = {}) => {
+    if (!value || value === 'N/A' || value === '') return;
+    
+    const { isHighlight = false, isCurrency = false } = options;
+    
+    if (doc.y > 750) {
+      doc.addPage();
+      addPageHeader();
+    }
+    
+    doc.fontSize(10)
+       .font('Helvetica-Bold')
+       .fillColor(mutedColor)
+       .text(`${label}:`, 50, doc.y, { width: 150 });
+    
+    let displayValue = value;
+    if (isCurrency && typeof value === 'number') {
+      displayValue = `₹${value.toLocaleString('en-IN')}`;
+    }
+    
+    doc.font('Helvetica')
+       .fillColor(isHighlight ? secondaryColor : textColor)
+       .text(displayValue, 220, doc.y, { width: 320 });
+    
+    doc.y += 18;
+  };
+
+  // Start first page
+  addPageHeader();
+
+  // Application status badge
+  const statusColors = {
+    'approved': '#10b981',
+    'rejected': '#ef4444', 
+    'under_review': '#f59e0b',
+    'disbursed': '#8b5cf6',
+    'submitted': secondaryColor,
+    'pending': mutedColor
+  };
+  
+  const statusColor = statusColors[application.status?.toLowerCase()] || mutedColor;
+  doc.roundedRect(40, doc.y, 200, 35, 5).fill(statusColor);
+  doc.fillColor('white')
+     .fontSize(16)
+     .font('Helvetica-Bold')
+     .text(`STATUS: ${(application.status || 'PENDING').toUpperCase()}`, 50, doc.y + 10);
+  
+  doc.y += 50;
+
+  // Application Overview with enhanced styling
+  addSectionHeader('APPLICATION OVERVIEW', '📋');
+  
+  const overviewLeft = [
+    ['Application ID', application.applicationId || application._id, { isHighlight: true }],
+    ['Application Type', (application.loanType || 'N/A').toUpperCase(), { isHighlight: true }],
+    ['Submitted Date', new Date(application.createdAt).toLocaleDateString('en-IN')]
+  ];
+  
+  const overviewRight = [
+    ['Current Status', (application.status || 'pending').toUpperCase()],
+    ['Requested Amount', application.loanSpecificDetails?.loanAmountRequired || application.loanAmount, { isCurrency: true, isHighlight: true }],
+    ['Processing Priority', application.priority || 'Standard']
+  ];
+  
+  if (application.approvedAmount) {
+    overviewRight.push(['Approved Amount', application.approvedAmount, { isCurrency: true, isHighlight: true }]);
+  }
+  
+  // Add two-column layout
+  const startY = doc.y;
+  
+  // Left column
+  doc.x = 50;
+  doc.y = startY;
+  overviewLeft.forEach(([label, value, options]) => {
+    addField(label, value, options);
+  });
+  
+  const leftEndY = doc.y;
+  
+  // Right column
+  doc.x = 320;
+  doc.y = startY;
+  overviewRight.forEach(([label, value, options]) => {
+    doc.fontSize(10)
+       .font('Helvetica-Bold')
+       .fillColor(mutedColor)
+       .text(`${label}:`, 320, doc.y, { width: 150 });
+    
+    let displayValue = value;
+    if (options?.isCurrency && typeof value === 'number') {
+      displayValue = `₹${value.toLocaleString('en-IN')}`;
+    }
+    
+    doc.font('Helvetica')
+       .fillColor(options?.isHighlight ? secondaryColor : textColor)
+       .text(displayValue || 'N/A', 460, doc.y, { width: 120 });
+    
+    doc.y += 18;
+  });
+  
+  doc.y = Math.max(leftEndY, doc.y) + 10;
+  doc.x = 50;
+
+  // Applicant Information
+  const user = application.userId || application.user;
+  if (user) {
+    addSectionHeader('APPLICANT INFORMATION', '👤');
+    
+    addField('Full Name', user.name, { isHighlight: true });
+    addField('Email Address', user.email);
+    addField('Phone Number', user.phoneNumber, { isHighlight: true });
+    addField('Date of Birth', application.personalDetails?.dateOfBirth ? 
+      new Date(application.personalDetails.dateOfBirth).toLocaleDateString('en-IN') : 'N/A');
+    addField('Gender', application.personalDetails?.gender);
+    addField('Marital Status', application.personalDetails?.maritalStatus);
+  }
+
+  // Comprehensive Personal Details
+  if (application.personalDetails) {
+    addSectionHeader('PERSONAL DETAILS', '📝');
+    
+    addField('Father Name', application.personalDetails.fatherName);
+    addField('Qualification', application.personalDetails.qualification);
+    addField('Number of Dependents', application.personalDetails.numberOfDependents);
+    addField('PAN Number', application.personalDetails.panNumber, { isHighlight: true });
+    addField('Residence Type', application.personalDetails.residenceType);
+    addField('Citizenship', application.personalDetails.citizenship);
+    addField('Alternate Phone', application.personalDetails.alternatePhone);
+    
+    // Address Information
+    if (application.personalDetails.permanentAddress || application.personalDetails.presentAddress) {
+      addSectionHeader('ADDRESS INFORMATION', '🏠');
+      
+      if (application.personalDetails.permanentAddress) {
+        const addr = application.personalDetails.permanentAddress;
+        const fullAddress = [addr.address, addr.district, addr.state, addr.pinCode].filter(Boolean).join(', ');
+        addField('Permanent Address', fullAddress);
+      }
+      
+      if (application.personalDetails.presentAddress) {
+        const addr = application.personalDetails.presentAddress;
+        const fullAddress = [addr.address, addr.district, addr.state, addr.pinCode].filter(Boolean).join(', ');
+        addField('Present Address', fullAddress);
+      }
+    }
+  }
+
+  // Loan Specific Details
+  if (application.loanSpecificDetails && Object.keys(application.loanSpecificDetails).length > 0) {
+    addSectionHeader('LOAN SPECIFIC DETAILS', '💰');
+    
+    addField('Loan Amount Required', application.loanSpecificDetails.loanAmountRequired, { isCurrency: true, isHighlight: true });
+    addField('Property Address', application.loanSpecificDetails.propertyAddress);
+    addField('Property Finalised', application.loanSpecificDetails.propertyFinalised ? 'Yes' : 'No');
+    addField('Agreement Executed', application.loanSpecificDetails.agreementExecuted ? 'Yes' : 'No');
+    addField('Agreement Value', application.loanSpecificDetails.agreementValue, { isCurrency: true });
+    addField('Vehicle Make', application.loanSpecificDetails.vehicleMake);
+    addField('Vehicle Model', application.loanSpecificDetails.vehicleModel);
+    addField('Vehicle Price', application.loanSpecificDetails.vehiclePrice, { isCurrency: true });
+    
+    if (application.loanSpecificDetails.preferredBanks?.length > 0) {
+      addField('Preferred Banks', application.loanSpecificDetails.preferredBanks.join(', '), { isHighlight: true });
+    }
+  }
+
+  // Employment Details
+  if (application.employmentDetails && Object.keys(application.employmentDetails).length > 0) {
+    addSectionHeader('EMPLOYMENT INFORMATION', '💼');
+    
+    addField('Organisation Name', application.employmentDetails.organisationName || application.employmentDetails.companyName);
+    addField('Organisation Type', application.employmentDetails.organisationType);
+    addField('Designation', application.employmentDetails.designation);
+    addField('Experience (Current)', application.employmentDetails.experienceCurrentOrg ? `${application.employmentDetails.experienceCurrentOrg} years` : 'N/A');
+    addField('Experience (Previous)', application.employmentDetails.experiencePreviousOrg ? `${application.employmentDetails.experiencePreviousOrg} years` : 'N/A');
+    addField('Monthly Salary', application.employmentDetails.monthlySalary || application.employmentDetails.monthlyIncome, { isCurrency: true, isHighlight: true });
+    addField('Place of Posting', application.employmentDetails.placeOfPosting);
+    addField('Salary Bank', application.employmentDetails.salaryBank);
+    addField('Firm Name', application.employmentDetails.firmName);
+    addField('Years in Business', application.employmentDetails.yearsInBusiness ? `${application.employmentDetails.yearsInBusiness} years` : 'N/A');
+  }
+
+  // Co-applicants
+  if (application.coApplicants?.length > 0) {
+    addSectionHeader('CO-APPLICANTS', '👥');
+    
+    application.coApplicants.forEach((coApp, index) => {
+      doc.fontSize(12).font('Helvetica-Bold').fillColor(secondaryColor);
+      doc.text(`Co-applicant ${index + 1}`, 50, doc.y);
+      doc.y += 15;
+      
+      if (coApp.personalDetails) {
+        addField('Full Name', coApp.personalDetails.fullName, { isHighlight: true });
+        addField('Email', coApp.personalDetails.email);
+        addField('Phone', coApp.personalDetails.phoneNumber);
+      }
+      
+      if (coApp.employmentDetails) {
+        addField('Company', coApp.employmentDetails.companyName);
+        addField('Monthly Income', coApp.employmentDetails.monthlyIncome, { isCurrency: true });
+      }
+      
+      doc.y += 10;
+    });
+  }
+
+  // Documents Summary
+  const documents = application.documents || application.loanDocuments || [];
+  if (documents.length > 0) {
+    addSectionHeader('DOCUMENTS SUBMITTED', '📄');
+    
+    documents.forEach((document, index) => {
+      const docType = document.documentType || document.type || 'Document';
+      const fileName = document.fileName || document.filename || document.originalname || document.name || 'File';
+      addField(`Document ${index + 1}`, `${docType} - ${fileName}`);
+    });
+    
+    doc.y += 10;
+  }
+
+  // Status History
+  if (application.statusHistory?.length > 0) {
+    addSectionHeader('APPLICATION HISTORY', '📊');
+    
+    application.statusHistory.forEach((history) => {
+      const date = new Date(history.date || history.updatedAt).toLocaleDateString('en-IN');
+      const status = (history.status || 'unknown').toUpperCase();
+      const comments = history.comments ? ` - ${history.comments}` : '';
+      addField(date, `${status}${comments}`);
+    });
+  }
+
+  // Professional footer on last page
+  doc.addPage();
+  
+  // Footer with company details
+  const footerY = 650;
+  doc.rect(0, footerY, doc.page.width, doc.page.height - footerY).fill(primaryColor);
+  
+  doc.fillColor('white')
+     .fontSize(18)
+     .font('Helvetica-Bold')
+     .text('INCENTUM FINANCIAL SERVICES', 50, footerY + 30, { align: 'center' });
+  
+  doc.fontSize(12)
+     .font('Helvetica')
+     .text('Official Loan Application Report', 50, footerY + 55, { align: 'center' });
+  
+  doc.fontSize(10)
+     .text('This is a computer-generated official document.', 50, footerY + 80, { align: 'center' })
+     .text('All information is confidential and for authorized use only.', 50, footerY + 95, { align: 'center' });
+  
+  doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, 50, footerY + 120, { align: 'center' });
+  doc.text('For queries: support@incentum.com | +91-1234567890', 50, footerY + 135, { align: 'center' });
+
+  // Digital signature area
+  doc.fontSize(8)
+     .text('Digitally Generated by Incentum Financial Services System', 50, footerY + 160, { align: 'center' });
+
+  // Finalize PDF
+  doc.end(  );
 });
 
 // Update Loan Application Status
@@ -439,29 +951,6 @@ const updateLoanApplicationStatus = asyncHandler(async (req, res) => {
 
   res.status(200).json(
     new ApiResponse(200, application, "Loan application status updated successfully")
-  );
-});
-
-// Get Single Application by ID
-const getApplicationById = asyncHandler(async (req, res) => {
-  const { applicationId } = req.params;
-
-  // Try to find in both LoanApplication and Form models
-  let application = await LoanApplication.findById(applicationId)
-    .populate('userId', 'name email phoneNumber');
-
-  if (!application) {
-    // Try to find in Form model
-    application = await Form.findById(applicationId)
-      .populate('user', 'name email phoneNumber');
-  }
-
-  if (!application) {
-    throw new ApiError(404, "Application not found");
-  }
-
-  res.status(200).json(
-    new ApiResponse(200, application, "Application details retrieved successfully")
   );
 });
 
@@ -520,276 +1009,6 @@ const updateApplicationById = asyncHandler(async (req, res) => {
   res.status(200).json(
     new ApiResponse(200, application, "Application updated successfully")
   );
-});
-
-// Download Application as PDF
-const downloadApplicationPDF = asyncHandler(async (req, res) => {
-  const { applicationId } = req.params;
-
-  // Try to find in both models
-  let application = await LoanApplication.findById(applicationId)
-    .populate('userId', 'name email phoneNumber');
-
-  if (!application) {
-    application = await Form.findById(applicationId)
-      .populate('user', 'name email phoneNumber');
-  }
-
-  if (!application) {
-    throw new ApiError(404, "Application not found");
-  }
-
-  // Create PDF with professional styling
-  const doc = new PDFDocument({ 
-    margin: 50,
-    size: 'A4',
-    info: {
-      Title: `Loan Application - ${application.applicationId || application._id}`,
-      Author: 'Incentum Financial Services',
-      Subject: 'Loan Application Details',
-      Keywords: 'loan, application, finance'
-    }
-  });
-  
-  // Set response headers
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="application-${application.applicationId || application._id}.pdf"`);
-  
-  // Pipe PDF to response
-  doc.pipe(res);
-
-  // Define colors
-  const primaryColor = '#2563eb'; // Blue
-  const secondaryColor = '#64748b'; // Gray
-  const accentColor = '#10b981'; // Green
-  const textColor = '#1f2937'; // Dark gray
-
-  // Helper function to add a section header
-  const addSectionHeader = (title, color = primaryColor) => {
-    doc.fontSize(14)
-       .fillColor(color)
-       .text(title, { underline: true })
-       .fillColor(textColor)
-       .moveDown(0.5);
-  };
-
-  // Helper function to add a field
-  const addField = (label, value, indent = 0) => {
-    if (value && value !== 'N/A' && value !== '') {
-      doc.fontSize(10)
-         .fillColor(secondaryColor)
-         .text(`${' '.repeat(indent)}${label}:`, { continued: true })
-         .fillColor(textColor)
-         .text(` ${value}`)
-         .moveDown(0.3);
-    }
-  };
-
-  // Header with company logo area and title
-  doc.rect(0, 0, doc.page.width, 80).fill('#f8fafc');
-  doc.fillColor(primaryColor)
-     .fontSize(24)
-     .text('INCENTUM FINANCIAL SERVICES', 50, 25, { align: 'center' });
-  
-  doc.fillColor(secondaryColor)
-     .fontSize(12)
-     .text('Professional Loan Application Report', 50, 50, { align: 'center' });
-
-  // Add a subtle border
-  doc.rect(50, 90, doc.page.width - 100, 2).fill(primaryColor);
-  
-  doc.y = 110;
-
-  // Status badge
-  const statusColors = {
-    'approved': accentColor,
-    'rejected': '#ef4444',
-    'under_review': '#f59e0b',
-    'disbursed': '#8b5cf6',
-    'submitted': primaryColor
-  };
-  
-  const statusColor = statusColors[application.status] || primaryColor;
-  doc.rect(50, doc.y, 150, 25).fill(statusColor);
-  doc.fillColor('white')
-     .fontSize(12)
-     .text(application.status?.toUpperCase() || 'PENDING', 55, doc.y + 8);
-  
-  doc.y += 40;
-  doc.fillColor(textColor);
-
-  // Application Overview Box
-  doc.rect(50, doc.y, doc.page.width - 100, 80).stroke(primaryColor);
-  doc.y += 10;
-  
-  addSectionHeader('APPLICATION OVERVIEW');
-  
-  const leftColumn = 50 + 20;
-  const rightColumn = (doc.page.width / 2) + 20;
-  const currentY = doc.y;
-  
-  // Left column
-  doc.y = currentY;
-  doc.x = leftColumn;
-  addField('Application ID', application.applicationId || application._id);
-  addField('Loan Type', application.loanType?.toUpperCase());
-  addField('Requested Amount', application.loanAmount ? `₹${application.loanAmount.toLocaleString()}` : 'N/A');
-  
-  // Right column
-  doc.y = currentY;
-  doc.x = rightColumn;
-  addField('Submitted Date', new Date(application.createdAt).toLocaleDateString('en-IN'));
-  addField('Tenure', application.tenure ? `${application.tenure} months` : 'N/A');
-  if (application.approvedAmount) {
-    addField('Approved Amount', `₹${application.approvedAmount.toLocaleString()}`, 0);
-  }
-  
-  doc.y += 20;
-  doc.x = 50;
-
-  // Applicant Information
-  const user = application.userId || application.user;
-  if (user) {
-    addSectionHeader('APPLICANT INFORMATION');
-    
-    const personalY = doc.y;
-    doc.y = personalY;
-    doc.x = leftColumn;
-    addField('Full Name', user.name);
-    addField('Email Address', user.email);
-    
-    doc.y = personalY;
-    doc.x = rightColumn;
-    addField('Phone Number', user.phoneNumber);
-    if (application.personalDetails?.dateOfBirth) {
-      addField('Date of Birth', new Date(application.personalDetails.dateOfBirth).toLocaleDateString('en-IN'));
-    }
-    
-    doc.y += 20;
-    doc.x = 50;
-  }
-
-  // Personal Details
-  if (application.personalDetails) {
-    addSectionHeader('PERSONAL DETAILS');
-    
-    const personalY = doc.y;
-    doc.y = personalY;
-    doc.x = leftColumn;
-    
-    if (application.personalDetails.gender) {
-      addField('Gender', application.personalDetails.gender.charAt(0).toUpperCase() + application.personalDetails.gender.slice(1));
-    }
-    if (application.personalDetails.maritalStatus) {
-      addField('Marital Status', application.personalDetails.maritalStatus.charAt(0).toUpperCase() + application.personalDetails.maritalStatus.slice(1));
-    }
-    
-    doc.y = personalY;
-    doc.x = rightColumn;
-    
-    if (application.personalDetails.alternatePhone) {
-      addField('Alternate Phone', application.personalDetails.alternatePhone);
-    }
-    if (application.personalDetails.panNumber) {
-      addField('PAN Number', application.personalDetails.panNumber);
-    }
-    
-    // Address
-    if (application.personalDetails.address) {
-      doc.y += 20;
-      doc.x = 50;
-      addField('Address', [
-        application.personalDetails.address.street,
-        application.personalDetails.address.city,
-        application.personalDetails.address.state,
-        application.personalDetails.address.pincode,
-        application.personalDetails.address.country
-      ].filter(Boolean).join(', '));
-    }
-    
-    doc.y += 20;
-    doc.x = 50;
-  }
-
-  // Employment Details
-  if (application.employmentDetails) {
-    addSectionHeader('EMPLOYMENT INFORMATION');
-    
-    const empY = doc.y;
-    doc.y = empY;
-    doc.x = leftColumn;
-    
-    if (application.employmentDetails.employmentType) {
-      addField('Employment Type', application.employmentDetails.employmentType.replace('_', ' ').toUpperCase());
-    }
-    if (application.employmentDetails.companyName) {
-      addField('Company Name', application.employmentDetails.companyName);
-    }
-    if (application.employmentDetails.designation) {
-      addField('Designation', application.employmentDetails.designation);
-    }
-    
-    doc.y = empY;
-    doc.x = rightColumn;
-    
-    if (application.employmentDetails.workExperience) {
-      addField('Work Experience', `${application.employmentDetails.workExperience} years`);
-    }
-    if (application.employmentDetails.monthlyIncome) {
-      addField('Monthly Income', `₹${application.employmentDetails.monthlyIncome.toLocaleString()}`);
-    }
-    
-    doc.y += 20;
-    doc.x = 50;
-  }
-
-  // Loan Details
-  if (application.purpose) {
-    addSectionHeader('LOAN PURPOSE');
-    addField('Purpose', application.purpose);
-    doc.y += 10;
-  }
-
-  // Documents
-  if (application.documents && application.documents.length > 0) {
-    addSectionHeader('DOCUMENTS SUBMITTED');
-    
-    application.documents.forEach((doc_item, index) => {
-      addField(`Document ${index + 1}`, `${doc_item.type} - ${doc_item.filename}`);
-    });
-    
-    doc.y += 10;
-  }
-
-  // Status History
-  if (application.statusHistory && application.statusHistory.length > 0) {
-    addSectionHeader('STATUS HISTORY', '#6b7280');
-    
-    application.statusHistory.forEach((history) => {
-      const date = new Date(history.date || history.updatedAt).toLocaleDateString('en-IN');
-      const status = history.status.toUpperCase();
-      const comments = history.comments ? ` - ${history.comments}` : '';
-      addField(date, `${status}${comments}`);
-    });
-    
-    doc.y += 10;
-  }
-
-  // Footer
-  doc.y = doc.page.height - 100;
-  doc.rect(50, doc.y, doc.page.width - 100, 2).fill(primaryColor);
-  doc.y += 10;
-  
-  doc.fontSize(8)
-     .fillColor(secondaryColor)
-     .text('This is a computer-generated document from Incentum Financial Services.', 50, doc.y, { align: 'center' });
-  
-  doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')} at ${new Date().toLocaleTimeString('en-IN')}`, 50, doc.y + 15, { align: 'center' });
-  
-  doc.text('For queries, contact: support@incentum.com | +91-1234567890', 50, doc.y + 30, { align: 'center' });
-
-  // Finalize PDF
-  doc.end();
 });
 
 // Create Default Admin (for initial setup)
@@ -939,5 +1158,6 @@ module.exports = {
   updateApplicationById,
   downloadApplicationPDF,
   createDefaultAdmin,
-  downloadDocument
+  downloadDocument,
+  serveDocument
 }; 

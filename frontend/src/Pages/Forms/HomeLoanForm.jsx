@@ -186,10 +186,14 @@ const HomeLoanForm = () => {
 
     await saveStepData(currentStep, stepData);
     setCurrentStep(prev => prev + 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNextFromStep1 = async () => {
@@ -202,42 +206,28 @@ const HomeLoanForm = () => {
         return;
       }
     }
-    setCurrentStep(currentStep + 1);
-  };
-
-  const handleNextFromStep2 = async () => {
-    if (!formData.loanAmountRequired) {
-      toast.error('Please enter the loan amount before proceeding.');
-      return;
-    }
-
-    // Only require name and phone number
-    const requiredFields = ['fullName', 'phoneNumber'];
-    for (const field of requiredFields) {
-      if (!formData[field]) {
-        toast.error(`Please fill all required fields in previous steps.`);
-        return;
-      }
-    }
 
     try {
-      // First create the application if not already created
-      if (!applicationId) {
+      let currentApplicationId = applicationId;
+      
+      // Create application if not already created
+      if (!currentApplicationId) {
         const createResponse = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
           userId: user.id,
           loanType: 'home'
         });
 
         if (createResponse.data.success) {
-          setApplicationId(createResponse.data.data.applicationId);
+          currentApplicationId = createResponse.data.data.applicationId;
+          setApplicationId(currentApplicationId);
         } else {
-          toast.error('Failed to create application: ' + (createResponse.data.message || 'Unknown error'));
+          toast.error('Failed to create application');
           return;
         }
       }
 
-      // Save step 1 data (personal details)
-      await saveStepData(1, {
+      // Prepare step data
+      const stepData = {
         fullName: formData.fullName,
         fatherName: formData.fatherName,
         phoneNumber: formData.phoneNumber,
@@ -247,24 +237,61 @@ const HomeLoanForm = () => {
         qualification: formData.qualification,
         employmentType: formData.employmentType,
         maritalStatus: formData.maritalStatus,
+        spouseEmploymentType: formData.spouseEmploymentType,
         numberOfDependents: formData.numberOfDependents,
         panNumber: formData.panNumber,
         residenceType: formData.residenceType,
         citizenship: formData.citizenship,
         permanentAddress: formData.permanentAddress,
         presentAddress: formData.presentAddress
+      };
+
+      console.log('🔍 Saving Step 1 data:', {
+        applicationId: currentApplicationId,
+        step: 1,
+        stepData: stepData
       });
 
-      // Save step 2 data (loan details)
+      // Save Step 1 personal details data
+      const saveResponse = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/save-step`, {
+        applicationId: currentApplicationId,
+        step: 1,
+        stepData: stepData
+      });
+
+      console.log('✅ Step 1 save response:', saveResponse.data);
+
+      setCurrentStep(currentStep + 1);
+      toast.success('Personal details saved successfully!');
+    } catch (error) {
+      console.error('❌ Error saving step 1 data:', error);
+      console.error('❌ Error response:', error.response?.data);
+      toast.error('Failed to save personal details: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleNextFromStep2 = async () => {
+    if (!formData.loanAmountRequired) {
+      toast.error('Please enter the loan amount before proceeding.');
+      return;
+    }
+
+    try {
+      // Save step 2 data (loan details) - Step 1 data already saved in handleNextFromStep1
       await saveStepData(2, {
-        loanAmountRequired: formData.loanAmountRequired
+        propertyFinalised: formData.propertyFinalised,
+        propertyAddress: formData.propertyAddress,
+        agreementExecuted: formData.agreementExecuted,
+        agreementValue: formData.agreementValue,
+        loanAmountRequired: formData.loanAmountRequired,
+        preferredBanks: formData.preferredBanks
       });
 
       setCurrentStep(currentStep + 1);
-      toast.success('Application data saved successfully!');
+      toast.success('Loan details saved successfully!');
     } catch (error) {
-      console.error('Error saving application data:', error);
-      toast.error('Failed to save application data: ' + (error.response?.data?.message || 'Server error'));
+      console.error('Error saving step 2 data:', error);
+      toast.error('Failed to save loan details');
     }
   };
 
@@ -337,7 +364,7 @@ const HomeLoanForm = () => {
 
       if (response.data.success) {
         toast.success('Home loan application submitted successfully!');
-        navigate('/user/applications');
+        navigate('/application-submitted-successfully');
       }
     } catch (error) {
       console.error('Error submitting application:', error);

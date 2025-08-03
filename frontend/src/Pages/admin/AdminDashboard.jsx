@@ -40,7 +40,7 @@ const AdminDashboard = () => {
       setUsersLoading(true);
       console.log('Fetching users...');
       
-      const response = await axios.get('/api/admin/users', {
+      const response = await axios.get('/admin/users', {
         withCredentials: true,
         params: {
           limit: 100,
@@ -82,7 +82,7 @@ const AdminDashboard = () => {
       console.log('Fetching applications with credentials...');
       
       // First, get the first page to determine total count
-      const firstResponse = await axios.get('/api/admin/applications', {
+      const firstResponse = await axios.get('/admin/applications', {
         withCredentials: true,
         params: {
           limit: 100, // Try to get more apps in first request
@@ -103,7 +103,7 @@ const AdminDashboard = () => {
         console.log(`Fetching remaining ${totalPages - 1} pages...`);
         for (let page = 2; page <= totalPages; page++) {
           try {
-            const response = await axios.get('/api/admin/applications', {
+            const response = await axios.get('/admin/applications', {
               withCredentials: true,
               params: {
                 limit: 100,

@@ -106,6 +106,8 @@ const PersonalLoanForm = () => {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
           userId: user.id,
           loanType: 'personal'
+        }, {
+          withCredentials: true
         });
         
         if (response.data.success) {
@@ -131,6 +133,8 @@ const PersonalLoanForm = () => {
         applicationId,
         step,
         stepData
+      }, {
+        withCredentials: true
       });
     } catch (error) {
       console.error('Error saving step data:', error);
@@ -202,10 +206,14 @@ const PersonalLoanForm = () => {
 
     await saveStepData(currentStep, stepData);
     setCurrentStep(prev => prev + 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Co-applicant handlers
@@ -246,8 +254,21 @@ const PersonalLoanForm = () => {
       // Always save step 1 data before submitting
       await saveStepData(1, {
         fullName: formData.fullName,
+        fatherName: formData.fatherName,
         phoneNumber: formData.phoneNumber,
-        // ...other fields if needed
+        email: formData.email,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        qualification: formData.qualification,
+        employmentType: formData.employmentType,
+        maritalStatus: formData.maritalStatus,
+        spouseEmploymentType: formData.spouseEmploymentType,
+        numberOfDependents: formData.numberOfDependents,
+        panNumber: formData.panNumber,
+        residenceType: formData.residenceType,
+        citizenship: formData.citizenship,
+        permanentAddress: formData.permanentAddress,
+        presentAddress: formData.presentAddress
       });
 
       // Save co-applicants data
@@ -256,11 +277,13 @@ const PersonalLoanForm = () => {
       // Submit application
               const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/submit`, {
         applicationId
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
         toast.success('Personal loan application submitted successfully!');
-        navigate('/user/applications');
+        navigate('/application-submitted-successfully');
       }
     } catch (error) {
       console.error('Error submitting application:', error);
@@ -284,7 +307,8 @@ const PersonalLoanForm = () => {
       formData.append('applicantType', 'main');
 
               const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/upload-document`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
       });
 
       if (response.data.success) {

@@ -112,6 +112,8 @@ const VehicleLoanForm = () => {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/create`, {
           userId: user.id,
           loanType: 'vehicle'
+        }, {
+          withCredentials: true
         });
         
         if (response.data.success) {
@@ -137,6 +139,8 @@ const VehicleLoanForm = () => {
         applicationId,
         step,
         stepData
+      }, {
+        withCredentials: true
       });
     } catch (error) {
       console.error('Error saving step data:', error);
@@ -214,10 +218,14 @@ const VehicleLoanForm = () => {
 
     await saveStepData(currentStep, stepData);
     setCurrentStep(prev => prev + 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
     setCurrentStep(prev => prev - 1);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Co-applicant handlers
@@ -255,24 +263,81 @@ const VehicleLoanForm = () => {
     const handleFinishApplication = async () => {
     setIsSubmitting(true);
     try {
-      // Always save step 1 data before submitting
+      // Save all step data before submitting
       await saveStepData(1, {
         fullName: formData.fullName,
+        fatherName: formData.fatherName,
         phoneNumber: formData.phoneNumber,
-        // ...other fields if needed
+        email: formData.email,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        qualification: formData.qualification,
+        employmentType: formData.employmentType,
+        maritalStatus: formData.maritalStatus,
+        spouseEmploymentType: formData.spouseEmploymentType,
+        numberOfDependents: formData.numberOfDependents,
+        panNumber: formData.panNumber,
+        residenceType: formData.residenceType,
+        citizenship: formData.citizenship,
+        permanentAddress: formData.permanentAddress,
+        presentAddress: formData.presentAddress
       });
 
-      // Save co-applicants data
-      await saveStepData(5, { coApplicants });
+      // Save vehicle details (step 2)
+      await saveStepData(2, {
+        vehicleMake: formData.vehicleMake,
+        vehicleModel: formData.vehicleModel,
+        expectedDeliveryDate: formData.expectedDeliveryDate,
+        dealerName: formData.dealerName,
+        dealerCity: formData.dealerCity,
+        vehiclePrice: formData.vehiclePrice,
+        loanAmountRequired: formData.loanAmountRequired,
+        preferredBanks: formData.preferredBanks
+      });
+
+      // Save employment details (step 3)
+      if (formData.employmentType === 'Salaried') {
+        await saveStepData(3, {
+          organisationName: formData.organisationName,
+          organisationType: formData.organisationType,
+          experienceCurrentOrg: formData.experienceCurrentOrg,
+          experiencePreviousOrg: formData.experiencePreviousOrg,
+          designation: formData.designation,
+          placeOfPosting: formData.placeOfPosting,
+          monthlySalary: formData.monthlySalary,
+          salaryBank: formData.salaryBank
+        });
+      } else {
+        await saveStepData(3, {
+          firmName: formData.firmName,
+          firmType: formData.firmType,
+          firmRegistrationDate: formData.firmRegistrationDate,
+          businessDesignation: formData.businessDesignation,
+          yearsInBusiness: formData.yearsInBusiness,
+          yearsOfITRFiling: formData.yearsOfITRFiling
+        });
+      }
+
+      // Save documents (step 4)
+      if (Object.keys(documents).length > 0) {
+        await saveStepData(4, documents);
+      }
+
+      // Save co-applicants data (step 5)
+      if (coApplicants.length > 0) {
+        await saveStepData(5, { coApplicants });
+      }
       
       // Submit application
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/submit`, {
         applicationId: applicationId
+      }, {
+        withCredentials: true
       });
 
       if (response.data.success) {
         toast.success('Vehicle loan application submitted successfully!');
-        navigate('/user/applications');
+        navigate('/application-submitted-successfully');
       }
     } catch (error) {
       console.error('Error submitting application:', error);
@@ -300,7 +365,8 @@ const VehicleLoanForm = () => {
       formData.append('applicantType', 'main');
 
               const response = await axios.post(`${import.meta.env.VITE_API_URL}/multi-step-form/upload-document`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
       });
 
       if (response.data.success) {

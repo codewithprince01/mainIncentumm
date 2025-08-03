@@ -39,7 +39,7 @@ const loanApplicationSchema = new mongoose.Schema({
       required: false,
       validate: {
         validator: function(v) {
-          return /^[0-9]{10}$/.test(v);
+          return !v || /^[0-9]{10}$/.test(v);
         },
         message: 'Phone number must be 10 digits'
       }

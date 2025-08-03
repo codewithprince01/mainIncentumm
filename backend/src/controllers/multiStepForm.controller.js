@@ -87,9 +87,12 @@ const createApplication = asyncHandler(async (req, res) => {
 
 // ====================== Save Step Data ======================
 const saveStepData = asyncHandler(async (req, res) => {
+
+
   const { applicationId, step, stepData } = req.body;
 
   if (!applicationId || !step || !stepData) {
+
     return res.status(400).json({
       success: false,
       message: "Application ID, step, and step data are required"
@@ -104,22 +107,56 @@ const saveStepData = asyncHandler(async (req, res) => {
   }
 
   try {
+
     const application = await LoanApplication.findById(applicationId);
     
     if (!application) {
+
       return res.status(404).json({
         success: false,
         message: "Application not found"
       });
     }
 
-    // Helper function to clean empty strings for enum fields
+
+
+    // Helper function to clean empty strings for enum fields and handle address objects
     const cleanEnumFields = (data) => {
-      const cleaned = { ...data };
-      Object.keys(cleaned).forEach(key => {
-        if (cleaned[key] === '') {
-          cleaned[key] = undefined;
+      const cleaned = {};
+      
+      // Define enum fields that shouldn't have empty strings
+      const enumFields = [
+        'employmentType', 'spouseEmploymentType', 'residenceType', 'citizenship',
+        'gender', 'maritalStatus', 'qualification', 'organisationType', 'firmType', 'businessDesignation'
+      ];
+      
+      Object.keys(data).forEach(key => {
+        const value = data[key];
+        
+        // Skip undefined, null, and "undefined" strings
+        if (value === undefined || value === null || value === 'undefined') {
+          return; // Don't include this key at all
         }
+        
+        // Skip empty strings for enum fields to avoid validation errors
+        if (enumFields.includes(key) && value === '') {
+          console.log(`⚠️ Skipping enum field ${key} with empty value`);
+          return; // Don't include empty enum fields
+        }
+        
+        // Skip empty address objects
+        if ((key === 'permanentAddress' || key === 'presentAddress') && 
+            (typeof value === 'object' && Object.keys(value).length === 0)) {
+          return; // Don't include empty address objects
+        }
+        
+        // Handle PAN number formatting
+        if (key === 'panNumber' && value) {
+          cleaned[key] = value.toUpperCase();
+          return;
+        }
+        
+        cleaned[key] = value;
       });
       return cleaned;
     };
@@ -127,10 +164,50 @@ const saveStepData = asyncHandler(async (req, res) => {
     // Update step data based on step number
     switch (step) {
       case 1: // Personal Details & Address
-        application.personalDetails = {
-          ...application.personalDetails,
-          ...cleanEnumFields(stepData)
-        };
+        const cleanedStepData = cleanEnumFields(stepData);
+        
+        // Remove address objects from cleanedStepData to handle them separately
+        const { permanentAddress, presentAddress, ...otherStepData } = cleanedStepData;
+        
+        // Update non-address fields safely
+        if (!application.personalDetails) {
+          application.personalDetails = {};
+        }
+        
+        // Clean up any existing corrupted address objects first
+        if (application.personalDetails.permanentAddress === undefined || application.personalDetails.permanentAddress === null) {
+          delete application.personalDetails.permanentAddress;
+        }
+        if (application.personalDetails.presentAddress === undefined || application.personalDetails.presentAddress === null) {
+          delete application.personalDetails.presentAddress;
+        }
+        
+        // Update each field individually to avoid spreading undefined address objects
+        Object.keys(otherStepData).forEach(key => {
+          if (otherStepData[key] !== undefined && otherStepData[key] !== null) {
+            console.log(`🔍 Setting personalDetails.${key} = ${otherStepData[key]}`);
+            application.personalDetails[key] = otherStepData[key];
+          } else {
+            console.log(`⚠️ Skipping personalDetails.${key} (value: ${otherStepData[key]})`);
+          }
+        });
+
+        console.log('🔍 Final personalDetails after step 1:', application.personalDetails);
+
+        // Only set address objects if they have actual data
+        if (stepData.permanentAddress && typeof stepData.permanentAddress === 'object' && 
+            stepData.permanentAddress !== 'undefined' && stepData.permanentAddress !== null &&
+            Object.keys(stepData.permanentAddress).length > 0) {
+          console.log('🔍 Setting permanentAddress:', stepData.permanentAddress);
+          application.personalDetails.permanentAddress = stepData.permanentAddress;
+        }
+        
+        if (stepData.presentAddress && typeof stepData.presentAddress === 'object' && 
+            stepData.presentAddress !== 'undefined' && stepData.presentAddress !== null &&
+            Object.keys(stepData.presentAddress).length > 0) {
+          console.log('🔍 Setting presentAddress:', stepData.presentAddress);
+          application.personalDetails.presentAddress = stepData.presentAddress;
+        }
         break;
         
       case 2: // Loan/Property/Vehicle Specific Details
@@ -187,6 +264,21 @@ const saveStepData = asyncHandler(async (req, res) => {
 
     await application.save();
 
+    console.log('✅ Application saved successfully for step', step);
+    
+    // Verify what was actually saved
+    const savedApp = await LoanApplication.findById(applicationId);
+    console.log('🔍 Verification - What was actually saved to DB:', {
+      id: savedApp._id,
+      hasPersonalDetails: !!savedApp.personalDetails,
+      personalDetailsKeys: savedApp.personalDetails ? Object.keys(savedApp.personalDetails) : 'none',
+      personalDetails: savedApp.personalDetails,
+      hasEmploymentDetails: !!savedApp.employmentDetails,
+      employmentDetails: savedApp.employmentDetails,
+      hasLoanSpecificDetails: !!savedApp.loanSpecificDetails,
+      loanSpecificDetails: savedApp.loanSpecificDetails
+    });
+
     res.status(200).json({
       success: true,
       message: "Step data saved successfully",
@@ -198,7 +290,9 @@ const saveStepData = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error saving step data:", error);
+    console.error("❌ Error saving step data:", error);
+    console.error("❌ Error details:", error.message);
+    console.error("❌ Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Failed to save step data",
@@ -448,20 +542,21 @@ const validateApplication = (application) => {
   const errors = [];
 
   // Validate personal details - only name and phone number required
-  if (!application.personalDetails?.fullName) {
+  if (!application.personalDetails?.fullName || application.personalDetails.fullName.trim() === '') {
     errors.push("Full name is required");
   }
-  if (!application.personalDetails?.phoneNumber) {
+  
+  if (!application.personalDetails?.phoneNumber || application.personalDetails.phoneNumber.trim() === '') {
     errors.push("Phone number is required");
   }
 
-  // Validate co-applicants - only name and phone number required
-  if (Array.isArray(application.coApplicants)) {
+  // Validate co-applicants - only name and phone number required (only if co-applicants exist)
+  if (Array.isArray(application.coApplicants) && application.coApplicants.length > 0) {
     application.coApplicants.forEach((co, idx) => {
-      if (!co.personalDetails?.fullName) {
+      if (!co.personalDetails?.fullName || co.personalDetails.fullName.trim() === '') {
         errors.push(`Co-applicant ${idx + 1}: Full name is required`);
       }
-      if (!co.personalDetails?.phoneNumber) {
+      if (!co.personalDetails?.phoneNumber || co.personalDetails.phoneNumber.trim() === '') {
         errors.push(`Co-applicant ${idx + 1}: Phone number is required`);
       }
     });
