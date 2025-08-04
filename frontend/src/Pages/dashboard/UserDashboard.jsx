@@ -100,9 +100,9 @@ const UserDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('/api/users/logout', {}, {
-        withCredentials: true
-      });
+                      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/users/logout`, {}, {
+          withCredentials: true
+        });
       logout();
       toast.success('Logged out successfully');
       navigate('/');

@@ -94,8 +94,10 @@ const CoApplicantForm = () => {
 
     setIsSubmitting(true);
     try {
-      await axios.put(`/api/loan-applications/${applicationId}`, {
-        coApplicants: coApplicants
+      await axios.post(`/multi-step-form/save-step`, {
+        applicationId,
+        step: 5,
+        stepData: { coApplicants }
       }, {
         withCredentials: true
       });

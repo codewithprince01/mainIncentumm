@@ -43,7 +43,7 @@ const UserProfile = () => {
   const fetchUserApplications = async () => {
     setApplicationsLoading(true);
     try {
-      const response = await axios.get('/api/loan-applications/my-applications', {
+      const response = await axios.get('/loan-applications/my-applications', {
         withCredentials: true
       });
       setApplications(response.data.data?.applications || []);
@@ -58,7 +58,7 @@ const UserProfile = () => {
 
   const fetchUserStats = async () => {
     try {
-      const response = await axios.get('/api/loan-applications/stats', {
+      const response = await axios.get('/loan-applications/stats', {
         withCredentials: true
       });
       setStats(response.data.data);

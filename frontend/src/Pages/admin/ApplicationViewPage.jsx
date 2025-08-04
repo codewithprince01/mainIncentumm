@@ -19,7 +19,7 @@ const ApplicationViewPage = () => {
     const fetchApplication = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/admin/applications/${applicationId}`, {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/admin/applications/${applicationId}`, {
           withCredentials: true
         });
         setApplication(response.data.data);
@@ -40,10 +40,10 @@ const ApplicationViewPage = () => {
   const handleDownload = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/admin/applications/${applicationId}/download`, {
-        responseType: 'blob',
-        withCredentials: true
-      });
+                      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/admin/applications/${applicationId}/download`, {
+          responseType: 'blob',
+          withCredentials: true
+        });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');

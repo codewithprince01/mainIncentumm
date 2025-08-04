@@ -228,18 +228,116 @@ const saveStepData = asyncHandler(async (req, res) => {
         // Documents are handled in the uploadDocument endpoint
         break;
         
-      case 5: // Co-Applicants
-        if (stepData.coApplicants) {
-          // Clean enum fields for co-applicants
-          const cleanedCoApplicants = stepData.coApplicants.map(coApplicant => ({
-            ...coApplicant,
-            personalDetails: cleanEnumFields(coApplicant.personalDetails || {}),
-            employmentDetails: cleanEnumFields(coApplicant.employmentDetails || {})
-          }));
+              case 5: // Co-Applicants
+          if (stepData.coApplicants) {
+          // Special cleaning for co-applicants - preserve structure but clean enum fields
+          const cleanedCoApplicants = stepData.coApplicants.map(coApplicant => {
+            // Clean personal details but preserve structure and map field names
+            const cleanedPersonalDetails = {};
+            if (coApplicant.personalDetails) {
+              Object.keys(coApplicant.personalDetails).forEach(key => {
+                const value = coApplicant.personalDetails[key];
+                // Only skip undefined, null, and "undefined" strings
+                if (value !== undefined && value !== null && value !== 'undefined') {
+                  // Map field names to match schema
+                  let mappedKey = key;
+                  if (key === 'full_name') mappedKey = 'fullName';
+                  if (key === 'mobile_number') mappedKey = 'phoneNumber';
+                  if (key === 'father_name') mappedKey = 'fatherName';
+                  if (key === 'email_id') mappedKey = 'email';
+                  if (key === 'dob') mappedKey = 'dateOfBirth';
+                  if (key === 'marital_status') mappedKey = 'maritalStatus';
+                  if (key === 'pan_number') mappedKey = 'panNumber';
+                  if (key === 'residence_type') mappedKey = 'residenceType';
+                  if (key === 'permanent_address') {
+                    // Handle permanent address as nested object
+                    if (!cleanedPersonalDetails.permanentAddress) {
+                      cleanedPersonalDetails.permanentAddress = {};
+                    }
+                    cleanedPersonalDetails.permanentAddress.address = value;
+                  } else if (key === 'permanent_pincode') {
+                    if (!cleanedPersonalDetails.permanentAddress) {
+                      cleanedPersonalDetails.permanentAddress = {};
+                    }
+                    cleanedPersonalDetails.permanentAddress.pinCode = value;
+                  } else if (key === 'present_address') {
+                    // Handle present address as nested object
+                    if (!cleanedPersonalDetails.presentAddress) {
+                      cleanedPersonalDetails.presentAddress = {};
+                    }
+                    cleanedPersonalDetails.presentAddress.address = value;
+                  } else if (key === 'present_pincode') {
+                    if (!cleanedPersonalDetails.presentAddress) {
+                      cleanedPersonalDetails.presentAddress = {};
+                    }
+                    cleanedPersonalDetails.presentAddress.pinCode = value;
+                  } else {
+                    // Handle PAN number formatting
+                    if (mappedKey === 'panNumber') {
+                      cleanedPersonalDetails[mappedKey] = value.toUpperCase();
+                    } else {
+                      cleanedPersonalDetails[mappedKey] = value;
+                    }
+                  }
+                }
+              });
+            }
+            
+            // Clean employment details but preserve structure and map field names
+            const cleanedEmploymentDetails = {};
+            if (coApplicant.employmentDetails) {
+              Object.keys(coApplicant.employmentDetails).forEach(key => {
+                const value = coApplicant.employmentDetails[key];
+                // Only skip undefined, null, and "undefined" strings
+                if (value !== undefined && value !== null && value !== 'undefined') {
+                  // Map field names to match schema
+                  let mappedKey = key;
+                  if (key === 'employment_type') mappedKey = 'employmentType';
+                  if (key === 'organisation_name') mappedKey = 'organisationName';
+                  if (key === 'organisation_type') mappedKey = 'organisationType';
+                  if (key === 'designation_salaried') mappedKey = 'designation';
+                  if (key === 'currentOrganizationExperience') mappedKey = 'experienceCurrentOrg';
+                  if (key === 'previousOrganizationExperience') mappedKey = 'experiencePreviousOrg';
+                  if (key === 'monthly_salary') mappedKey = 'monthlySalary';
+                  if (key === 'place_of_posting') mappedKey = 'placeOfPosting';
+                  if (key === 'salary_bank_name') mappedKey = 'salaryBank';
+                  if (key === 'company_name') mappedKey = 'companyName';
+                  if (key === 'company_type') mappedKey = 'companyType';
+                  if (key === 'incorporation_date') mappedKey = 'incorporationDate';
+                  if (key === 'designation_self') mappedKey = 'designation';
+                  if (key === 'years_in_business') mappedKey = 'yearsInBusiness';
+                  if (key === 'years_of_itr_filing') mappedKey = 'yearsOfITRFiling';
+                  if (key === 'annual_income') mappedKey = 'annualIncome';
+                  if (key === 'business_address') mappedKey = 'businessAddress';
+                  if (key === 'firm_name') mappedKey = 'firmName';
+                  if (key === 'firm_type') mappedKey = 'firmType';
+                  if (key === 'firm_registration_date') mappedKey = 'firmRegistrationDate';
+                  if (key === 'business_designation') mappedKey = 'businessDesignation';
+                  
+                  cleanedEmploymentDetails[mappedKey] = value;
+                }
+              });
+            }
+            
+            return {
+              ...coApplicant,
+              personalDetails: cleanedPersonalDetails,
+              employmentDetails: cleanedEmploymentDetails
+            };
+          });
+          
           // Filter out empty co-applicants (no name and no phone)
-          application.coApplicants = cleanedCoApplicants.filter(
-            co => co && co.personalDetails && (co.personalDetails.fullName || co.personalDetails.phoneNumber)
-          );
+          // Handle both naming conventions: fullName/full_name and phoneNumber/mobile_number
+          application.coApplicants = cleanedCoApplicants.filter(co => {
+            if (!co || !co.personalDetails) {
+              return false;
+            }
+            
+            const hasName = co.personalDetails.fullName || co.personalDetails.full_name;
+            const hasPhone = co.personalDetails.phoneNumber || co.personalDetails.mobile_number;
+            
+            return hasName || hasPhone;
+          });
         }
         break;
         
@@ -252,9 +350,16 @@ const saveStepData = asyncHandler(async (req, res) => {
 
     // Filter out empty co-applicants before saving (defensive, for all steps)
     if (Array.isArray(application.coApplicants)) {
-      application.coApplicants = application.coApplicants.filter(
-        co => co && co.personalDetails && (co.personalDetails.fullName || co.personalDetails.phoneNumber)
-      );
+      application.coApplicants = application.coApplicants.filter(co => {
+        if (!co || !co.personalDetails) {
+          return false;
+        }
+        
+        const hasName = co.personalDetails.fullName || co.personalDetails.full_name;
+        const hasPhone = co.personalDetails.phoneNumber || co.personalDetails.mobile_number;
+        
+        return hasName || hasPhone;
+      });
     }
 
     // Update current step if progressing forward

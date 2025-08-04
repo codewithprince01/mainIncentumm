@@ -54,7 +54,7 @@ const Header = () => {
   const handleLogout = async () => {
     try {
       const response = await axios.post(
-        '/api/users/logout',
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/users/logout`,
         {},
         { withCredentials: true }
       );
